@@ -1,8 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0a0a;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .glow-spotify {
+    box-shadow: 0 0 40px rgba(29, 185, 84, 0.15);
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg bg-spotify text-black font-semibold text-sm
+           hover:bg-spotify/90 active:scale-[0.98] transition-all disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg bg-white/10 text-white font-medium text-sm
+           hover:bg-white/15 border border-white/10 active:scale-[0.98] transition-all disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply px-3 py-1.5 rounded-lg text-muted text-sm hover:text-white hover:bg-white/5 transition-all;
+  }
+
+  .insight-pulse {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
 }
