@@ -66,10 +66,17 @@ def extract_topics_simple(text):
 def analyze_reviews():
     """Analyze unprocessed reviews"""
     print("Starting analysis...")
-    
-    # Fetch unprocessed reviews (no sentiment analysis)
-    response = supabase.table('raw_reviews').select('id, review_text').is_('sentiment_analysis', 'null').limit(50).execute()
-    reviews = response.data
+
+    # Get all review IDs that have been analyzed
+    analyzed_response = supabase.table('sentiment_analysis').select('review_id').execute()
+    analyzed_ids = set(row['review_id'] for row in analyzed_response.data)
+
+    # Fetch recent reviews that haven't been analyzed
+    response = supabase.table('raw_reviews').select('id, review_text').order('id', desc=True).limit(50).execute()
+    all_reviews = response.data
+
+    # Filter out already analyzed reviews
+    reviews = [review for review in all_reviews if review['id'] not in analyzed_ids]
     
     print(f"Found {len(reviews)} reviews to analyze")
     
