@@ -1,0 +1,27 @@
+# Environment & secrets
+.env
+.env.local
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Data & generated outputs
+vector_db/
+reports/
+*.log
+
+# Node / dashboard
+dashboard/node_modules/
+dashboard/dist/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
