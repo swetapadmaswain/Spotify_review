@@ -57,3 +57,6 @@ langchain-anthropic==0.0.1
 
 # Phase 4: Monitoring
 prometheus-client==0.19.0
+
+# Cloud Deployment
+supabase==2.3.4
