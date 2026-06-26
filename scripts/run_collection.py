@@ -15,8 +15,17 @@ if not supabase_url or not supabase_key:
 
 supabase = createClient(supabase_url, supabase_key)
 
+# Import connectors
+try:
+    from app.connectors.app_store import AppStoreConnector
+    from app.connectors.play_store import PlayStoreConnector
+    from app.connectors.forum import ForumConnector
+except ImportError as e:
+    print(f"ERROR importing connectors: {e}")
+    sys.exit(1)
+
 def collect_reviews():
-    """Collect reviews from all sources"""
+    """Collect reviews from all sources using real APIs"""
     print("Starting data collection...")
     
     # Create collection run record
@@ -35,48 +44,70 @@ def collect_reviews():
         sys.exit(1)
     
     total_collected = 0
+    all_reviews = []
     
-    # Sample reviews
-    all_reviews = [
-        {
-            'source': 'appstore',
-            'review_text': 'The recommendation algorithm is terrible. I keep hearing the same songs.',
-            'rating': 2,
-            'author': 'user123',
-            'date': datetime.utcnow().isoformat(),
-            'metadata': {'version': '8.8.0'},
-            'collection_run_id': run_id
-        },
-        {
-            'source': 'appstore',
-            'review_text': 'Love the new discovery features! Found so many great artists.',
-            'rating': 5,
-            'author': 'music_fan',
-            'date': datetime.utcnow().isoformat(),
-            'metadata': {'version': '8.8.0'},
-            'collection_run_id': run_id
-        },
-        {
-            'source': 'playstore',
-            'review_text': 'Why does the radio play the same 50 songs? Need more variety.',
-            'rating': 3,
-            'author': 'android_user',
-            'date': datetime.utcnow().isoformat(),
-            'metadata': {'version': '8.8.0'},
-            'collection_run_id': run_id
-        },
-        {
-            'source': 'reddit',
-            'review_text': 'Does anyone else feel like Discover Weekly has gotten worse lately?',
-            'rating': None,
-            'author': 'reddit_user',
-            'date': datetime.utcnow().isoformat(),
-            'metadata': {'subreddit': 'spotify'},
-            'collection_run_id': run_id
-        }
-    ]
+    # Collect from App Store (Spotify app ID: 324684580)
+    print("Collecting from App Store...")
+    try:
+        app_store = AppStoreConnector(app_id='324684580')
+        app_reviews = app_store.fetch_reviews(limit=50)
+        print(f"Collected {len(app_reviews)} reviews from App Store")
+        
+        for review in app_reviews:
+            all_reviews.append({
+                'source': 'appstore',
+                'review_text': review.get('content', ''),
+                'rating': review.get('rating'),
+                'author': review.get('author', 'Anonymous'),
+                'date': datetime.utcnow().isoformat(),
+                'metadata': {'version': review.get('version', 'Unknown'), 'title': review.get('title', '')},
+                'collection_run_id': run_id
+            })
+    except Exception as e:
+        print(f"ERROR collecting from App Store: {e}")
+    
+    # Collect from Play Store (Spotify package: com.spotify.music)
+    print("Collecting from Play Store...")
+    try:
+        play_store = PlayStoreConnector(package_name='com.spotify.music')
+        play_reviews = play_store.fetch_reviews(sort='newest', count=50)
+        print(f"Collected {len(play_reviews)} reviews from Play Store")
+        
+        for review in play_reviews:
+            all_reviews.append({
+                'source': 'playstore',
+                'review_text': review.get('content', ''),
+                'rating': review.get('rating'),
+                'author': review.get('author', 'Anonymous'),
+                'date': datetime.utcnow().isoformat(),
+                'metadata': {'version': review.get('version', 'Unknown')},
+                'collection_run_id': run_id
+            })
+    except Exception as e:
+        print(f"ERROR collecting from Play Store: {e}")
+    
+    # Collect from Spotify Community Forums
+    print("Collecting from Spotify Community Forums...")
+    try:
+        forum = ForumConnector()
+        forum_threads = forum.scrape_threads(category='discovery', limit=30)
+        print(f"Collected {len(forum_threads)} threads from forums")
+        
+        for thread in forum_threads:
+            all_reviews.append({
+                'source': 'forum',
+                'review_text': thread.get('title', '') + ' ' + thread.get('comments', ''),
+                'rating': None,
+                'author': thread.get('author', 'Anonymous'),
+                'date': datetime.utcnow().isoformat(),
+                'metadata': {'url': thread.get('url', ''), 'category': 'discovery'},
+                'collection_run_id': run_id
+            })
+    except Exception as e:
+        print(f"ERROR collecting from forums: {e}")
     
     # Store in Supabase
+    print(f"Storing {len(all_reviews)} reviews in Supabase...")
     for review in all_reviews:
         try:
             supabase.table('raw_reviews').insert(review).execute()
