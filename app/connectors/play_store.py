@@ -4,9 +4,10 @@ from typing import List, Dict, Optional
 from loguru import logger
 from config import settings
 try:
-    from google_play_scraper import app, reviews
+    import google_play_scraper as gps
 except ImportError:
     logger.warning("google-play-scraper not installed, using fallback method")
+    gps = None
 
 
 class PlayStoreConnector:
@@ -32,40 +33,38 @@ class PlayStoreConnector:
         
         try:
             # Try using google-play-scraper
-            from google_play_scraper import Sort
-            
-            sort_map = {
-                'newest': Sort.NEWEST,
-                'rating': Sort.RATING,
-                'relevance': Sort.RELEVANCE
-            }
-            
-            sort_option = sort_map.get(sort, Sort.NEWEST)
-            
-            # Fetch reviews in batches
-            continuation_token = None
-            while len(reviews) < count:
-                batch_count = min(count - len(reviews), 100)
+            if gps:
+                sort_map = {
+                    'newest': gps.Sort.NEWEST,
+                    'rating': gps.Sort.RATING
+                }
                 
-                result, continuation_token = reviews(
-                    self.package_name,
-                    lang='en',
-                    country='us',
-                    sort=sort_option,
-                    count=batch_count,
-                    continuation_token=continuation_token
-                )
+                sort_option = sort_map.get(sort, gps.Sort.NEWEST)
                 
-                for review in result:
-                    parsed_review = self._parse_review(review)
-                    if parsed_review:
-                        reviews.append(parsed_review)
-                
-                if not continuation_token:
-                    break
-                
-                # Rate limiting
-                time.sleep(0.5)
+                # Fetch reviews in batches
+                continuation_token = None
+                while len(reviews) < count:
+                    batch_count = min(count - len(reviews), 100)
+                    
+                    result, continuation_token = gps.reviews(
+                        self.package_name,
+                        lang='en',
+                        country='us',
+                        sort=sort_option,
+                        count=batch_count,
+                        continuation_token=continuation_token
+                    )
+                    
+                    for review in result:
+                        parsed_review = self._parse_review(review)
+                        if parsed_review:
+                            reviews.append(parsed_review)
+                    
+                    if not continuation_token:
+                        break
+                    
+                    # Rate limiting
+                    time.sleep(0.5)
                 
         except ImportError:
             logger.warning("google-play-scraper not available, using web scraping fallback")

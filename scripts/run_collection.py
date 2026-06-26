@@ -15,22 +15,20 @@ if not supabase_url or not supabase_key:
 
 supabase = createClient(supabase_url, supabase_key)
 
-# Import connectors
+# Import Play Store connector (only working connector)
 try:
-    from app.connectors.app_store import AppStoreConnector
     from app.connectors.play_store import PlayStoreConnector
-    from app.connectors.forum import ForumConnector
 except ImportError as e:
-    print(f"ERROR importing connectors: {e}")
+    print(f"ERROR importing Play Store connector: {e}")
     sys.exit(1)
 
 def collect_reviews():
-    """Collect reviews from all sources using real APIs"""
-    print("Starting data collection...")
+    """Collect reviews from Play Store (only working connector)"""
+    print("Starting data collection from Play Store...")
     
     # Create collection run record
     run_data = {
-        'source': 'all',
+        'source': 'playstore',
         'start_time': datetime.utcnow().isoformat(),
         'status': 'running'
     }
@@ -46,31 +44,11 @@ def collect_reviews():
     total_collected = 0
     all_reviews = []
     
-    # Collect from App Store (Spotify app ID: 324684580) - 4000 reviews
-    print("Collecting from App Store (4000 reviews)...")
-    try:
-        app_store = AppStoreConnector(app_id='324684580')
-        app_reviews = app_store.fetch_reviews(limit=4000)
-        print(f"Collected {len(app_reviews)} reviews from App Store")
-        
-        for review in app_reviews:
-            all_reviews.append({
-                'source': 'appstore',
-                'review_text': review.get('content', ''),
-                'rating': review.get('rating'),
-                'author': review.get('author', 'Anonymous'),
-                'date': datetime.utcnow().isoformat(),
-                'metadata': {'version': review.get('version', 'Unknown'), 'title': review.get('title', '')},
-                'collection_run_id': run_id
-            })
-    except Exception as e:
-        print(f"ERROR collecting from App Store: {e}")
-    
-    # Collect from Play Store (Spotify package: com.spotify.music) - 4000 reviews
-    print("Collecting from Play Store (4000 reviews)...")
+    # Collect from Play Store (Spotify package: com.spotify.music) - 10,000 reviews
+    print("Collecting from Play Store (10,000 reviews)...")
     try:
         play_store = PlayStoreConnector(package_name='com.spotify.music')
-        play_reviews = play_store.fetch_reviews(sort='newest', count=4000)
+        play_reviews = play_store.fetch_reviews(sort='newest', count=10000)
         print(f"Collected {len(play_reviews)} reviews from Play Store")
         
         for review in play_reviews:
@@ -86,37 +64,14 @@ def collect_reviews():
     except Exception as e:
         print(f"ERROR collecting from Play Store: {e}")
     
-    # Collect from Spotify Community Forums - 2000 threads
-    print("Collecting from Spotify Community Forums (2000 threads)...")
-    try:
-        forum = ForumConnector()
-        # Scrape multiple categories
-        categories = ['discovery', 'help', 'ideas', 'mobile', 'desktop']
-        for category in categories:
-            print(f"  Collecting from category: {category}")
-            forum_threads = forum.scrape_threads(category=category, limit=400)
-            print(f"  Collected {len(forum_threads)} threads from {category}")
-            
-            for thread in forum_threads:
-                all_reviews.append({
-                    'source': 'forum',
-                    'review_text': thread.get('title', '') + ' ' + str(thread.get('comments', '')),
-                    'rating': None,
-                    'author': thread.get('author', 'Anonymous'),
-                    'date': datetime.utcnow().isoformat(),
-                    'metadata': {'url': thread.get('url', ''), 'category': category},
-                    'collection_run_id': run_id
-                })
-    except Exception as e:
-        print(f"ERROR collecting from forums: {e}")
-    
     # Store in Supabase
     print(f"Storing {len(all_reviews)} reviews in Supabase...")
     for review in all_reviews:
         try:
             supabase.table('raw_reviews').insert(review).execute()
             total_collected += 1
-            print(f"Inserted review {total_collected}/{len(all_reviews)}")
+            if total_collected % 100 == 0:
+                print(f"Inserted {total_collected}/{len(all_reviews)} reviews...")
         except Exception as e:
             print(f"ERROR inserting review: {e}")
     
