@@ -1,0 +1,12 @@
+app/
+src/
+scripts/
+tests/
+workflows/
+n8n_workflows/
+supabase/
+*.py
+requirements.txt
+Dockerfile
+docker-compose.yml
+pyproject.toml
