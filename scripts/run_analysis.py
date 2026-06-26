@@ -6,10 +6,14 @@ from supabase import createClient
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-supabase = createClient(
-    os.getenv('SUPABASE_URL'),
-    os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-)
+supabase_url = os.getenv('SUPABASE_URL')
+supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+
+if not supabase_url or not supabase_key:
+    print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
+    sys.exit(1)
+
+supabase = createClient(supabase_url, supabase_key)
 
 def analyze_sentiment_simple(text):
     """Simple rule-based sentiment analysis (free)"""
@@ -95,7 +99,7 @@ def analyze_reviews():
         
         analyzed_count += 1
     
-    # Generate insights from analysis
+    # Generate insights from analysis (always run, even if no new reviews)
     generate_insights()
     
     print(f"Analysis completed. Analyzed {analyzed_count} reviews")
