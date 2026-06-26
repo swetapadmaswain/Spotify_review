@@ -90,10 +90,10 @@ export const api = {
       .select('insight_type, data')
       .in('insight_type', ['pattern', 'segment', 'root_cause', 'unmet_need']);
     
-    const patterns = data?.filter(i => i.insight_type === 'pattern').length || 0;
-    const segments = data?.filter(i => i.insight_type === 'segment').length || 0;
-    const rootCauses = data?.filter(i => i.insight_type === 'root_cause').length || 0;
-    const unmetNeeds = data?.filter(i => i.insight_type === 'unmet_need').length || 0;
+    const patterns = data?.filter((i: any) => i.insight_type === 'pattern').length || 0;
+    const segments = data?.filter((i: any) => i.insight_type === 'segment').length || 0;
+    const rootCauses = data?.filter((i: any) => i.insight_type === 'root_cause').length || 0;
+    const unmetNeeds = data?.filter((i: any) => i.insight_type === 'unmet_need').length || 0;
     
     return {
       pattern_count: patterns,
@@ -113,7 +113,7 @@ export const api = {
     
     const trends: Record<string, Record<string, number>> = {};
     
-    data?.forEach(item => {
+    data?.forEach((item: any) => {
       const date = new Date(item.analyzed_at).toISOString().split('T')[0];
       if (!trends[date]) trends[date] = {};
       if (!trends[date][item.sentiment]) trends[date][item.sentiment] = 0;
@@ -133,7 +133,7 @@ export const api = {
     
     const topics: Record<string, Record<string, number>> = {};
     
-    data?.forEach(item => {
+    data?.forEach((item: any) => {
       const date = new Date(item.analyzed_at).toISOString().split('T')[0];
       if (!topics[date]) topics[date] = {};
       if (!topics[date][item.primary_topic]) topics[date][item.primary_topic] = 0;
@@ -151,7 +151,7 @@ export const api = {
       .select('*')
       .eq('insight_type', 'pattern');
     
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: parseInt(item.id.toString().slice(0, 8), 16),
       pattern_type: item.insight_type,
       pattern_description: item.title,
@@ -166,7 +166,7 @@ export const api = {
       .select('*')
       .eq('insight_type', 'segment');
     
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: parseInt(item.id.toString().slice(0, 8), 16),
       segment_name: item.title,
       user_count: 100,
@@ -181,7 +181,7 @@ export const api = {
       .select('*')
       .eq('insight_type', 'unmet_need');
     
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: parseInt(item.id.toString().slice(0, 8), 16),
       need_description: item.title,
       need_category: 'general',
@@ -197,7 +197,7 @@ export const api = {
       .select('*')
       .eq('insight_type', 'root_cause');
     
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: parseInt(item.id.toString().slice(0, 8), 16),
       issue_topic: item.title,
       root_causes: item.data || {},
@@ -211,7 +211,7 @@ export const api = {
       .select('*')
       .eq('insight_type', 'recommendation');
     
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: parseInt(item.id.toString().slice(0, 8), 16),
       title: item.title,
       description: item.description || '',
@@ -232,7 +232,7 @@ export const api = {
       .select('sentiment');
     
     const distribution: Record<string, number> = {};
-    data?.forEach(item => {
+    data?.forEach((item: any) => {
       if (!distribution[item.sentiment]) distribution[item.sentiment] = 0;
       distribution[item.sentiment]++;
     });
@@ -247,7 +247,7 @@ export const api = {
       .limit(100);
     
     const topicCounts: Record<string, number> = {};
-    data?.forEach(item => {
+    data?.forEach((item: any) => {
       if (!topicCounts[item.primary_topic]) topicCounts[item.primary_topic] = 0;
       topicCounts[item.primary_topic]++;
     });
@@ -263,6 +263,6 @@ export const api = {
   },
 
   generateReport: async () => {
-    return { message: 'Report generation triggered' };
+    return { message: 'Report generation triggered', file_path: 'reports/executive_report.pdf' };
   },
 };
