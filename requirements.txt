@@ -16,7 +16,7 @@ pandas==2.1.3
 numpy==1.26.2
 
 # Data quality
-great-expectations==0.17.14
+# great-expectations==0.17.14  # Removed due to pydantic conflict
 python-dateutil==2.8.2
 
 # Utilities
