@@ -8,6 +8,7 @@ async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export interface InsightSummary {
+  total_reviews: number;
   pattern_count: number;
   segment_count: number;
   root_cause_count: number;
@@ -85,17 +86,23 @@ export interface RoadmapItem {
 
 export const api = {
   getSummary: async (): Promise<InsightSummary> => {
-    const { data } = await supabase
-      .from('insights')
-      .select('insight_type, data')
-      .in('insight_type', ['pattern', 'segment', 'root_cause', 'unmet_need']);
-    
-    const patterns = data?.filter((i: any) => i.insight_type === 'pattern').length || 0;
-    const segments = data?.filter((i: any) => i.insight_type === 'segment').length || 0;
-    const rootCauses = data?.filter((i: any) => i.insight_type === 'root_cause').length || 0;
-    const unmetNeeds = data?.filter((i: any) => i.insight_type === 'unmet_need').length || 0;
-    
+    const [{ data: insightsData }, { count: totalReviewsCount }] = await Promise.all([
+      supabase
+        .from('insights')
+        .select('insight_type, data')
+        .in('insight_type', ['pattern', 'segment', 'root_cause', 'unmet_need']),
+      supabase
+        .from('raw_reviews')
+        .select('*', { count: 'exact', head: true })
+    ]);
+
+    const patterns = insightsData?.filter((i: any) => i.insight_type === 'pattern').length || 0;
+    const segments = insightsData?.filter((i: any) => i.insight_type === 'segment').length || 0;
+    const rootCauses = insightsData?.filter((i: any) => i.insight_type === 'root_cause').length || 0;
+    const unmetNeeds = insightsData?.filter((i: any) => i.insight_type === 'unmet_need').length || 0;
+
     return {
+      total_reviews: totalReviewsCount || 0,
       pattern_count: patterns,
       segment_count: segments,
       root_cause_count: rootCauses,
