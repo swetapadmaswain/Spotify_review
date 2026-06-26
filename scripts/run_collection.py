@@ -13,7 +13,7 @@ if not supabase_url or not supabase_key:
     print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
     sys.exit(1)
 
-supabase = createClient(supabase_url, supabase_key)
+supabase = create_client(supabase_url, supabase_key)
 
 # Import Play Store connector (only working connector)
 try:
