@@ -71,8 +71,8 @@ def analyze_reviews():
     analyzed_response = supabase.table('sentiment_analysis').select('review_id').execute()
     analyzed_ids = set(row['review_id'] for row in analyzed_response.data)
 
-    # Fetch recent reviews that haven't been analyzed
-    response = supabase.table('raw_reviews').select('id, review_text').order('id', desc=True).limit(50).execute()
+    # Fetch all reviews that haven't been analyzed (no limit)
+    response = supabase.table('raw_reviews').select('id, review_text').execute()
     all_reviews = response.data
 
     # Filter out already analyzed reviews
