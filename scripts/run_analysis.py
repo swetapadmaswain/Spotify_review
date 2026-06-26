@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import datetime
-from supabase import createClient
+from supabase import create_client
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,7 +13,7 @@ if not supabase_url or not supabase_key:
     print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
     sys.exit(1)
 
-supabase = createClient(supabase_url, supabase_key)
+supabase = create_client(supabase_url, supabase_key)
 
 def analyze_sentiment_simple(text):
     """Simple rule-based sentiment analysis (free)"""
