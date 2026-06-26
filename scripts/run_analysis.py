@@ -109,6 +109,13 @@ def generate_insights():
     """Generate insights from analyzed data"""
     print("Generating insights...")
     
+    # Clear existing insights to avoid duplicates
+    try:
+        supabase.table('insights').delete().neq('id', 0).execute()
+        print("Cleared existing insights")
+    except Exception as e:
+        print(f"Warning: Could not clear existing insights: {e}")
+    
     # Get sentiment distribution
     sentiment_response = supabase.table('sentiment_analysis').select('sentiment').execute()
     sentiments = [row['sentiment'] for row in sentiment_response.data]
@@ -124,14 +131,17 @@ def generate_insights():
     # Create pattern insights
     if topic_counts:
         top_topic = topic_counts.most_common(1)[0]
-        supabase.table('insights').insert({
-            'insight_type': 'pattern',
-            'title': f"Most common topic: {top_topic[0]}",
-            'description': f"Users frequently mention {top_topic[0]} in their feedback ({top_topic[1]} mentions)",
-            'data': {'topic': top_topic[0], 'count': top_topic[1]},
-            'confidence': 0.8
-        }).execute()
-        print(f"Created pattern insight for topic: {top_topic[0]}")
+        try:
+            supabase.table('insights').insert({
+                'insight_type': 'pattern',
+                'title': f"Most common topic: {top_topic[0]}",
+                'description': f"Users frequently mention {top_topic[0]} in their feedback ({top_topic[1]} mentions)",
+                'data': {'topic': top_topic[0], 'count': top_topic[1]},
+                'confidence': 0.8
+            }).execute()
+            print(f"Created pattern insight for topic: {top_topic[0]}")
+        except Exception as e:
+            print(f"Error creating pattern insight: {e}")
     
     # Create sentiment insight (always create regardless of threshold)
     if sentiments:
@@ -139,44 +149,56 @@ def generate_insights():
         positive_count = sentiments.count('positive')
         neutral_count = sentiments.count('neutral')
         
-        supabase.table('insights').insert({
-            'insight_type': 'root_cause',
-            'title': 'Sentiment distribution',
-            'description': f'Sentiment breakdown: {positive_count} positive, {negative_count} negative, {neutral_count} neutral',
-            'data': {'negative_count': negative_count, 'positive_count': positive_count, 'neutral_count': neutral_count, 'total': len(sentiments)},
-            'confidence': 0.75
-        }).execute()
-        print(f"Created sentiment insight: {positive_count} positive, {negative_count} negative, {neutral_count} neutral")
+        try:
+            supabase.table('insights').insert({
+                'insight_type': 'root_cause',
+                'title': 'Sentiment distribution',
+                'description': f'Sentiment breakdown: {positive_count} positive, {negative_count} negative, {neutral_count} neutral',
+                'data': {'negative_count': negative_count, 'positive_count': positive_count, 'neutral_count': neutral_count, 'total': len(sentiments)},
+                'confidence': 0.75
+            }).execute()
+            print(f"Created sentiment insight: {positive_count} positive, {negative_count} negative, {neutral_count} neutral")
+        except Exception as e:
+            print(f"Error creating sentiment insight: {e}")
     
     # Create sample segment insight
-    supabase.table('insights').insert({
-        'insight_type': 'segment',
-        'title': 'User segment analysis',
-        'description': 'Based on review patterns, users can be segmented by their primary concerns',
-        'data': {'segments': ['recommendation-focused', 'ui-focused', 'performance-focused']},
-        'confidence': 0.7
-    }).execute()
-    print("Created segment insight")
+    try:
+        supabase.table('insights').insert({
+            'insight_type': 'segment',
+            'title': 'User segment analysis',
+            'description': 'Based on review patterns, users can be segmented by their primary concerns',
+            'data': {'segments': ['recommendation-focused', 'ui-focused', 'performance-focused']},
+            'confidence': 0.7
+        }).execute()
+        print("Created segment insight")
+    except Exception as e:
+        print(f"Error creating segment insight: {e}")
     
     # Create sample unmet need insight
-    supabase.table('insights').insert({
-        'insight_type': 'unmet_need',
-        'title': 'Feature requests',
-        'description': 'Users are requesting better playlist customization and discovery features',
-        'data': {'needs': ['better recommendations', 'more variety', 'ui improvements']},
-        'confidence': 0.8
-    }).execute()
-    print("Created unmet need insight")
+    try:
+        supabase.table('insights').insert({
+            'insight_type': 'unmet_need',
+            'title': 'Feature requests',
+            'description': 'Users are requesting better playlist customization and discovery features',
+            'data': {'needs': ['better recommendations', 'more variety', 'ui improvements']},
+            'confidence': 0.8
+        }).execute()
+        print("Created unmet need insight")
+    except Exception as e:
+        print(f"Error creating unmet need insight: {e}")
     
     # Create sample recommendation
-    supabase.table('insights').insert({
-        'insight_type': 'recommendation',
-        'title': 'Improve recommendation algorithm',
-        'description': 'Focus on reducing repetition in radio and playlist suggestions',
-        'data': {'priority': 'high', 'category': 'product'},
-        'confidence': 0.85
-    }).execute()
-    print("Created recommendation insight")
+    try:
+        supabase.table('insights').insert({
+            'insight_type': 'recommendation',
+            'title': 'Improve recommendation algorithm',
+            'description': 'Focus on reducing repetition in radio and playlist suggestions',
+            'data': {'priority': 'high', 'category': 'product'},
+            'confidence': 0.85
+        }).execute()
+        print("Created recommendation insight")
+    except Exception as e:
+        print(f"Error creating recommendation insight: {e}")
     
     print("Insights generated")
 
