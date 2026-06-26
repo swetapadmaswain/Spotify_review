@@ -5,39 +5,55 @@ This project implements Phase 1 of the AI-Powered Review Discovery Engine for Sp
 ## Overview
 
 Phase 1 focuses on building the data collection infrastructure to gather user feedback from:
-- App Store reviews
-- Play Store reviews
-- Reddit discussions
-- Spotify Community Forums
-- Social media conversations (Twitter, Facebook)
+- Play Store reviews (✓ Working - collects 10,000 reviews per run)
+- App Store reviews (✗ Not working - RSS feed deprecated)
+- Spotify Community Forums (✗ Not working - complex HTML structure)
+- Reddit discussions (requires API credentials)
+- Social media conversations (requires API credentials)
 
-All data collection is limited to 500 records per source to control token usage and costs.
+**Current Deployment:**
+- Frontend: Vercel (React dashboard)
+- Backend: Supabase (PostgreSQL database)
+- Automation: GitHub Actions (daily data collection)
+
+**Data Collection:**
+- Currently collects 10,000 reviews from Play Store per run
+- GitHub Actions runs daily at 2 AM UTC (7:30 AM IST)
 
 ## Project Structure
 
 ```
 spotify-review-engine/
-├── src/
+├── app/
 │   ├── connectors/          # Data source connectors
-│   │   ├── app_store.py
-│   │   ├── play_store.py
-│   │   ├── reddit.py
-│   │   ├── forum.py
-│   │   └── social_media.py
+│   │   ├── app_store.py     # App Store RSS feed (not working)
+│   │   ├── play_store.py    # Play Store scraper (working)
+│   │   ├── reddit.py        # Reddit API (requires credentials)
+│   │   ├── forum.py         # Spotify Community Forums (not working)
+│   │   └── social_media.py  # Twitter/Facebook (requires credentials)
 │   ├── database/            # Database models and connection
 │   │   ├── models.py
 │   │   └── connection.py
-│   ├── data_quality/        # Data validation and cleaning
-│   │   └── service.py
-│   └── api/                 # FastAPI server
-│       └── server.py
-├── n8n_workflows/           # n8n workflow configurations
-│   ├── appstore_collection.json
-│   ├── playstore_collection.json
-│   ├── reddit_collection.json
-│   ├── forum_collection.json
-│   └── social_collection.json
-├── config.py                # Configuration settings
+│   └── api/                 # API routes
+├── dashboard/               # React frontend for Vercel
+│   ├── src/
+│   │   ├── api/             # API client
+│   │   ├── components/      # React components
+│   │   └── App.tsx
+│   └── package.json
+├── scripts/                 # Data collection and analysis scripts
+│   ├── run_collection.py    # Main data collection script
+│   └── run_analysis.py      # Sentiment and topic analysis
+├── supabase/
+│   └── migrations/          # SQL migrations for Supabase
+│       ├── 001_initial_schema.sql
+│       ├── 002_seed_insights.sql
+│       └── 003_fix_rls_policies.sql
+├── .github/
+│   └── workflows/
+│       └── data-collection.yml  # GitHub Actions workflow
+├── config/
+│   └── settings.py          # Configuration settings
 ├── requirements.txt         # Python dependencies
 ├── .env.example            # Environment variables template
 └── README.md              # This file
@@ -46,9 +62,9 @@ spotify-review-engine/
 ## Prerequisites
 
 - Python 3.9 or higher
-- PostgreSQL 12 or higher
-- n8n (for workflow automation)
-- S3-compatible storage (AWS S3 or MinIO)
+- Supabase account (for database and hosting)
+- GitHub account (for GitHub Actions automation)
+- Vercel account (for frontend deployment)
 
 ## Installation
 
@@ -64,275 +80,142 @@ cd "c:\Graduation Project - Spotify"
 pip install -r requirements.txt
 ```
 
-### 3. Set up PostgreSQL database
+### 3. Set up Supabase
 
-```bash
-# Create database
-createdb spotify_reviews
+1. Create a new project at https://supabase.com
+2. Run the SQL migrations in Supabase SQL Editor:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_seed_insights.sql`
+   - `supabase/migrations/003_fix_rls_policies.sql`
+3. Get your Supabase URL and service role key from Project Settings
 
-# Or using psql
-psql -U postgres
-CREATE DATABASE spotify_reviews;
-```
+### 4. Configure GitHub Secrets
 
-### 4. Configure environment variables
+Add the following secrets to your GitHub repository:
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
 
-Copy the example environment file and update it with your credentials:
+### 5. Deploy to Vercel
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your actual values:
-
-```env
-# Database Configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/spotify_reviews
-
-# App Store Configuration
-APP_STORE_APP_ID=324684580
-
-# Play Store Configuration
-PLAY_STORE_PACKAGE_NAME=com.spotify.music
-
-# Reddit Configuration
-REDDIT_CLIENT_ID=your_reddit_client_id
-REDDIT_CLIENT_SECRET=your_reddit_client_secret
-
-# Twitter Configuration
-TWITTER_BEARER_TOKEN=your_twitter_bearer_token
-
-# S3/MinIO Configuration
-S3_ENDPOINT_URL=http://localhost:9000
-S3_ACCESS_KEY=your_s3_access_key
-S3_SECRET_KEY=your_s3_secret_key
-S3_BUCKET=spotify-reviews-raw
-```
-
-### 5. Initialize database
-
-```bash
-python -c "from src.database import init_db; init_db()"
-```
+1. Connect your GitHub repository to Vercel
+2. Set root directory to `dashboard`
+3. Add environment variables:
+   - `VITE_SUPABASE_URL`: Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+4. Deploy
 
 ## Usage
 
-### Starting the API Server
+### Automated Data Collection
 
-The FastAPI server provides REST endpoints for data collection:
+The system uses GitHub Actions for automated data collection:
+
+1. GitHub Actions runs daily at 2 AM UTC (7:30 AM IST)
+2. Collects 10,000 reviews from Play Store using google-play-scraper
+3. Stores data in Supabase database
+4. Runs sentiment and topic analysis
+5. Generates insights
+
+### Manual Data Collection
+
+To run data collection manually:
 
 ```bash
-python src/api/server.py
+# Set environment variables
+export SUPABASE_URL=your_supabase_url
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Run collection script
+python scripts/run_collection.py
+
+# Run analysis script
+python scripts/run_analysis.py
 ```
 
-Or using uvicorn:
+### View Dashboard
 
-```bash
-uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### API Endpoints
-
-#### Health Check
-```bash
-GET http://localhost:8000/
-GET http://localhost:8000/health
-```
-
-#### Fetch App Store Reviews
-```bash
-POST http://localhost:8000/api/appstore/reviews
-Content-Type: application/json
-
-{
-  "limit": 500
-}
-```
-
-#### Fetch Play Store Reviews
-```bash
-POST http://localhost:8000/api/playstore/reviews
-Content-Type: application/json
-
-{
-  "limit": 500
-}
-```
-
-#### Fetch Reddit Posts
-```bash
-POST http://localhost:8000/api/reddit/posts
-Content-Type: application/json
-
-{
-  "limit": 500,
-  "category": "spotify"
-}
-```
-
-#### Fetch Forum Threads
-```bash
-POST http://localhost:8000/api/forum/threads
-Content-Type: application/json
-
-{
-  "limit": 500,
-  "category": "discovery"
-}
-```
-
-#### Fetch Social Media Mentions
-```bash
-POST http://localhost:8000/api/social/mentions
-Content-Type: application/json
-
-{
-  "limit": 500,
-  "query": "#spotify"
-}
-```
-
-#### Get Collection Status
-```bash
-GET http://localhost:8000/api/collection/status
-```
+Access the React dashboard at your Vercel deployment URL to:
+- View collected reviews
+- See sentiment analysis
+- Explore topic analysis
+- Read generated insights
 
 ### Using Connectors Directly
 
-You can also use the connectors directly in Python scripts:
+You can use the connectors directly in Python scripts:
 
 ```python
-from src.connectors import AppStoreConnector, PlayStoreConnector
-
-# Fetch App Store reviews
-app_store = AppStoreConnector()
-reviews = app_store.fetch_reviews(limit=500)
+from app.connectors.play_store import PlayStoreConnector
 
 # Fetch Play Store reviews
-play_store = PlayStoreConnector()
-reviews = play_store.fetch_reviews(count=500)
+play_store = PlayStoreConnector(package_name='com.spotify.music')
+reviews = play_store.fetch_reviews(sort='newest', count=100)
 ```
-
-### Using Data Quality Services
-
-```python
-from src.data_quality import DataQualityService, DeduplicationService
-
-# Validate data
-quality_service = DataQualityService()
-validation = quality_service.validate_batch(reviews, 'appstore')
-
-# Clean data
-cleaned_reviews = quality_service.clean_data(reviews, 'appstore')
-
-# Remove duplicates
-dedup_service = DeduplicationService()
-unique_reviews = dedup_service.remove_duplicates(cleaned_reviews)
-```
-
-## n8n Workflow Integration
-
-The project includes pre-configured n8n workflows for automated data collection:
-
-1. Import the workflow JSON files from `n8n_workflows/` directory into n8n
-2. Configure the S3 credentials in n8n AWS S3 node
-3. Configure Slack credentials for notifications (optional)
-4. Activate the workflows
-
-Each workflow:
-- Runs daily (configurable)
-- Calls the appropriate API endpoint
-- Transforms and stores data in S3
-- Sends success/error notifications
-
-### Workflow Files
-
-- `appstore_collection.json` - App Store review collection
-- `playstore_collection.json` - Play Store review collection
-- `reddit_collection.json` - Reddit posts collection
-- `forum_collection.json` - Forum threads collection
-- `social_collection.json` - Social media mentions collection
 
 ## Database Schema
 
 ### data_collection_runs
 Tracks data collection runs with status and metadata.
 
-### raw_data_metadata
-Tracks raw data files and their processing status.
+### raw_reviews
+Stores raw review data from all sources (Play Store, App Store, Forums, etc.).
 
-### processed_reviews
-Stores processed and cleaned review data from all sources.
+### sentiment_analysis
+Stores sentiment analysis results for each review.
 
-## Data Quality Features
+### topic_analysis
+Stores topic analysis results for each review.
 
-### Validation
-- Required field checking
-- Data type validation
-- Text encoding validation
-- Rating range validation
+### insights
+Stores generated insights from the analysis (patterns, root causes, segments, etc.).
 
-### Cleaning
-- HTML tag removal
-- Whitespace normalization
-- Missing value handling
-- Author name normalization
+## Connector Status
 
-### Deduplication
-- Hash-based duplicate detection
-- Similarity-based near-duplicate detection
-- Cross-source deduplication
+### Play Store Connector ✓ Working
+- Uses google-play-scraper library
+- Successfully fetches real reviews
+- Collects 10,000 reviews per run
+- No API key required
 
-## Configuration
+### App Store Connector ✗ Not Working
+- RSS feed returns 200 but 0 entries
+- Apple may have deprecated the RSS feed format
+- Requires alternative approach (official API or different scraping method)
 
-All configuration is managed through `config.py` and environment variables:
+### Forum Connector ✗ Not Working
+- Updated URLs to working categories (Help, Ideas, Account, Subscriptions)
+- HTML structure is complex/dynamic (Lithium platform)
+- Current parsing logic returns 0 threads
+- Requires more sophisticated parsing or API access
 
-- `reviews_limit`: Default limit for data collection (default: 500)
-- `batch_size`: Batch size for processing (default: 500)
-- Database connection settings
-- API credentials for each data source
-- S3/MinIO storage settings
+### Reddit Connector ✗ Requires Credentials
+- Requires PRAW library and Reddit API credentials
+- Not configured in current deployment
 
-## Token Usage Control
-
-To prevent excessive token usage:
-
-- All connectors are limited to 500 records per collection
-- Batch processing is limited to 500 records
-- Rate limiting is implemented for all API calls
-- Deduplication reduces redundant processing
+### Social Media Connector ✗ Requires Credentials
+- Requires Twitter/Facebook API credentials
+- Not configured in current deployment
 
 ## Troubleshooting
 
-### Database Connection Issues
+### GitHub Actions Not Running
 
-```bash
-# Check PostgreSQL is running
-pg_isready
+- Check that GitHub Secrets are configured correctly
+- Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set
+- Check workflow logs in GitHub Actions tab
 
-# Test connection
-psql -U postgres -d spotify_reviews
-```
+### Data Not Appearing in Dashboard
 
-### Reddit API Issues
+- Verify SQL migrations were run in Supabase
+- Check RLS policies are correctly configured
+- Ensure Vercel environment variables are set
+- Check Supabase Table Editor for data
 
-- Ensure Reddit API credentials are correct
-- Check that the Reddit app has the correct permissions
-- Verify user agent string is unique
+### Play Store Scraper Fails
 
-### Twitter API Issues
-
-- Use bearer token for API v2 (recommended)
-- Ensure API key has read permissions
-- Check rate limits are not exceeded
-
-### S3/MinIO Issues
-
-- Verify endpoint URL is correct
-- Check access key and secret key
-- Ensure bucket exists or can be created
+- Ensure google-play-scraper is installed (version 1.2.7)
+- Check internet connectivity
+- Verify package name is correct (com.spotify.music)
 
 ## Development
 
