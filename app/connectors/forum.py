@@ -14,7 +14,7 @@ class ForumConnector:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
     
-    def scrape_threads(self, category: str = 'discovery', limit: int = 500) -> List[Dict]:
+    def scrape_threads(self, category: str = 'help', limit: int = 500) -> List[Dict]:
         """
         Scrape forum threads from a category (limited to 500 to control token usage)
         
@@ -29,16 +29,15 @@ class ForumConnector:
         
         threads = []
         
-        # Spotify Community Forum URLs for different categories
+        # Spotify Community Forum URLs for different categories (updated working URLs)
         category_urls = {
-            'discovery': f'{self.base_url}/t5/Discovery/ct-p/discovery',
             'help': f'{self.base_url}/t5/Help/ct-p/help',
             'ideas': f'{self.base_url}/t5/Ideas/ct-p/ideas',
-            'mobile': f'{self.base_url}/t5/Mobile/ct-p/mobile',
-            'desktop': f'{self.base_url}/t5/Desktop/ct-p/desktop'
+            'account': f'{self.base_url}/t5/Account/ct-p/account',
+            'subscriptions': f'{self.base_url}/t5/Subscriptions/ct-p/subscriptions'
         }
         
-        url = category_urls.get(category, f'{self.base_url}/t5/Discovery/ct-p/discovery')
+        url = category_urls.get(category, f'{self.base_url}/t5/Help/ct-p/help')
         
         try:
             response = requests.get(url, headers=self.headers, timeout=30)
@@ -46,8 +45,8 @@ class ForumConnector:
             
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Find thread elements (adjust selectors based on actual forum structure)
-            thread_elements = soup.find_all('li', class_='message-thread')
+            # Find thread elements using updated selectors for current forum structure
+            thread_elements = soup.find_all('div', class_='lia-quilt-row')
             
             for element in thread_elements[:limit]:
                 try:
