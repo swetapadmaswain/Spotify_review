@@ -46,11 +46,11 @@ def collect_reviews():
     total_collected = 0
     all_reviews = []
     
-    # Collect from App Store (Spotify app ID: 324684580)
-    print("Collecting from App Store...")
+    # Collect from App Store (Spotify app ID: 324684580) - 4000 reviews
+    print("Collecting from App Store (4000 reviews)...")
     try:
         app_store = AppStoreConnector(app_id='324684580')
-        app_reviews = app_store.fetch_reviews(limit=50)
+        app_reviews = app_store.fetch_reviews(limit=4000)
         print(f"Collected {len(app_reviews)} reviews from App Store")
         
         for review in app_reviews:
@@ -66,11 +66,11 @@ def collect_reviews():
     except Exception as e:
         print(f"ERROR collecting from App Store: {e}")
     
-    # Collect from Play Store (Spotify package: com.spotify.music)
-    print("Collecting from Play Store...")
+    # Collect from Play Store (Spotify package: com.spotify.music) - 4000 reviews
+    print("Collecting from Play Store (4000 reviews)...")
     try:
         play_store = PlayStoreConnector(package_name='com.spotify.music')
-        play_reviews = play_store.fetch_reviews(sort='newest', count=50)
+        play_reviews = play_store.fetch_reviews(sort='newest', count=4000)
         print(f"Collected {len(play_reviews)} reviews from Play Store")
         
         for review in play_reviews:
@@ -86,23 +86,27 @@ def collect_reviews():
     except Exception as e:
         print(f"ERROR collecting from Play Store: {e}")
     
-    # Collect from Spotify Community Forums
-    print("Collecting from Spotify Community Forums...")
+    # Collect from Spotify Community Forums - 2000 threads
+    print("Collecting from Spotify Community Forums (2000 threads)...")
     try:
         forum = ForumConnector()
-        forum_threads = forum.scrape_threads(category='discovery', limit=30)
-        print(f"Collected {len(forum_threads)} threads from forums")
-        
-        for thread in forum_threads:
-            all_reviews.append({
-                'source': 'forum',
-                'review_text': thread.get('title', '') + ' ' + thread.get('comments', ''),
-                'rating': None,
-                'author': thread.get('author', 'Anonymous'),
-                'date': datetime.utcnow().isoformat(),
-                'metadata': {'url': thread.get('url', ''), 'category': 'discovery'},
-                'collection_run_id': run_id
-            })
+        # Scrape multiple categories
+        categories = ['discovery', 'help', 'ideas', 'mobile', 'desktop']
+        for category in categories:
+            print(f"  Collecting from category: {category}")
+            forum_threads = forum.scrape_threads(category=category, limit=400)
+            print(f"  Collected {len(forum_threads)} threads from {category}")
+            
+            for thread in forum_threads:
+                all_reviews.append({
+                    'source': 'forum',
+                    'review_text': thread.get('title', '') + ' ' + str(thread.get('comments', '')),
+                    'rating': None,
+                    'author': thread.get('author', 'Anonymous'),
+                    'date': datetime.utcnow().isoformat(),
+                    'metadata': {'url': thread.get('url', ''), 'category': category},
+                    'collection_run_id': run_id
+                })
     except Exception as e:
         print(f"ERROR collecting from forums: {e}")
     
