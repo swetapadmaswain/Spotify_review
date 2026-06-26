@@ -2,7 +2,6 @@ import requests
 import time
 from typing import List, Dict, Optional
 from loguru import logger
-from config import settings
 try:
     import google_play_scraper as gps
 except ImportError:
@@ -12,9 +11,9 @@ except ImportError:
 
 class PlayStoreConnector:
     """Connector for fetching Play Store reviews"""
-    
-    def __init__(self, package_name: Optional[str] = None):
-        self.package_name = package_name or settings.play_store_package_name
+
+    def __init__(self, package_name: str):
+        self.package_name = package_name
         
     def fetch_reviews(self, sort: str = 'newest', count: int = 500) -> List[Dict]:
         """
