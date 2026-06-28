@@ -25,3 +25,10 @@ dashboard/dist/
 .vscode/
 .DS_Store
 Thumbs.db
+# Vercel
+.vercel
+
+# Build artifacts
+build/
+dist/
+*.pyc
