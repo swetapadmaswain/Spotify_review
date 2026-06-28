@@ -23,10 +23,14 @@ def run_migration(sql_file_path):
     
     try:
         cursor.execute(sql)
-        print(f"✓ Successfully executed {sql_file_path}")
+        print(f"Successfully executed {sql_file_path}")
     except Exception as e:
-        print(f"✗ Error executing {sql_file_path}: {e}")
-        raise
+        # Skip if table already exists
+        if "already exists" in str(e):
+            print(f"Skipped {sql_file_path} (tables already exist)")
+        else:
+            print(f"Error executing {sql_file_path}: {e}")
+            raise
     finally:
         cursor.close()
         conn.close()
@@ -45,4 +49,4 @@ if __name__ == "__main__":
         migration_path = os.path.join(migrations_dir, migration)
         run_migration(migration_path)
     
-    print("\n✓ All migrations completed successfully!")
+    print("\nAll migrations completed successfully!")
