@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     api_port: int = 8000
     
     # Data Collection Settings
-    reviews_limit: int = 500
-    batch_size: int = 500
+    reviews_limit: int = 10000
+    batch_size: int = 1000
     
     # Phase 2: AI Analysis Engine Settings
     # Vector Database
@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     api_auth_token: Optional[str] = None
     reports_output_dir: str = "./reports"
     dashboard_url: str = "http://localhost:5173"
+    
+    # Supabase Configuration
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
     
     class Config:
         env_file = ".env"

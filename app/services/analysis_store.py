@@ -18,9 +18,11 @@ class AnalysisStore:
             result = db.execute(text(query), params or {})
             rows = result.fetchall()
             keys = result.keys()
-            return [dict(zip(keys, row)) for row in rows]
+            data = [dict(zip(keys, row)) for row in rows]
+            logger.debug(f"AnalysisStore query returned {len(data)} rows")
+            return data
         except Exception as e:
-            logger.error(f"AnalysisStore query error: {e}")
+            logger.error(f"AnalysisStore query error: {e}\nQuery: {query[:200]}")
             return []
         finally:
             db.close()

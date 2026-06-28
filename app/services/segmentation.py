@@ -79,6 +79,8 @@ class UserSegmentationEngine:
     def build_and_save(self, behavior_segments: List[Dict],
                        frustration_segments: List[Dict]) -> None:
         """Persist segments derived from analysis data."""
+        saved_count = 0
+        
         for row in behavior_segments[:5]:
             behavior = row.get("behavior") or "unknown"
             _save_segment(
@@ -88,6 +90,7 @@ class UserSegmentationEngine:
                 challenges=[row.get("dominant_sentiment", "mixed")],
                 avg_sentiment=str(row.get("dominant_sentiment") or "neutral"),
             )
+            saved_count += 1
 
         for row in frustration_segments[:3]:
             frustration = row.get("frustration") or "unknown"
@@ -98,8 +101,11 @@ class UserSegmentationEngine:
                 challenges=[frustration],
                 avg_sentiment="negative",
             )
+            saved_count += 1
 
-        if not behavior_segments and not frustration_segments:
+        # Only add fallback if NO real segments were detected
+        if saved_count == 0:
+            logger.warning("No behavior or frustration segments detected. Using fallback segments.")
             _save_segment(
                 name="High-Frustration Users",
                 criteria={"sentiment": "negative"},
@@ -131,7 +137,7 @@ class DemographicSegmentation:
             COUNT(*) AS count
         FROM sentiment_analysis s
         JOIN topic_analysis t ON s.review_id = t.review_id
-        JOIN processed_reviews r ON s.review_id = r.id
+        JOIN raw_reviews r ON s.review_id = r.id
         GROUP BY r.source, s.sentiment, t.primary_topic
         ORDER BY r.source, count DESC
         """
@@ -176,7 +182,7 @@ class TenureSegmentation:
         query = """
         SELECT
             CASE
-                WHEN r.version IS NOT NULL AND r.version != '' THEN 'Active User'
+                WHEN r.metadata->>'version' IS NOT NULL AND r.metadata->>'version' != '' THEN 'Active User'
                 ELSE 'Unknown Tenure'
             END AS tenure_segment,
             t.primary_topic,
@@ -184,7 +190,7 @@ class TenureSegmentation:
             COUNT(*) AS count
         FROM topic_analysis t
         JOIN sentiment_analysis s ON t.review_id = s.review_id
-        JOIN processed_reviews r ON t.review_id = r.id
+        JOIN raw_reviews r ON t.review_id = r.id
         GROUP BY tenure_segment, t.primary_topic, s.sentiment
         ORDER BY count DESC
         LIMIT 20
@@ -199,11 +205,13 @@ class TenureSegmentation:
             segment = row.get("tenure_segment") or "Unknown"
             by_tenure[segment] = by_tenure.get(segment, 0) + int(row.get("count") or 0)
 
+        # Only save if we have real data
         for segment, count in by_tenure.items():
-            _save_segment(
-                name=f"Tenure: {segment}",
-                criteria={"tenure_segment": segment},
-                user_count=count,
-                challenges=[],
-                avg_sentiment="mixed",
-            )
+            if count > 0:
+                _save_segment(
+                    name=f"Tenure: {segment}",
+                    criteria={"tenure_segment": segment},
+                    user_count=count,
+                    challenges=[],
+                    avg_sentiment="mixed",
+                )

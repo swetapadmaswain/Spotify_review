@@ -13,7 +13,18 @@ insight_store = InsightStore()
 async def get_insights_summary():
     """Executive summary of generated insights."""
     try:
-        return {"success": True, "data": insight_store.get_summary()}
+        summary = insight_store.get_summary()
+        # Add total reviews count from raw_reviews table
+        from app.database.connection import get_session
+        from sqlalchemy import text
+        db = get_session()
+        try:
+            result = db.execute(text("SELECT COUNT(*) as count FROM raw_reviews"))
+            total_reviews = result.fetchone()[0] if result else 0
+            summary["total_reviews"] = total_reviews
+        finally:
+            db.close()
+        return {"success": True, "data": summary}
     except Exception as e:
         logger.error(f"Error fetching insight summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))

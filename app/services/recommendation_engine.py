@@ -57,15 +57,26 @@ class RecommendationEngine:
 
     def generate_recommendations(self) -> List[Dict[str, Any]]:
         insights = self.insight_store.get_all_insights()
+        # Increase context from 4000 to 8000 chars
+        insights_json = json.dumps(insights, indent=2, default=str)
+        context = insights_json[:8000]
+        
         prompt = f"""
-Based on these Spotify music discovery insights, generate 5 strategic recommendations as JSON array:
-{json.dumps(insights, indent=2, default=str)[:4000]}
+Based on these Spotify music discovery insights, generate 5-8 strategic recommendations as JSON array:
 
-Each item must have: title, description, category (product|algorithm|ux|education),
-priority (high|medium|low), complexity (low|medium|high), expected_impact (high|medium|low),
-success_metrics (array of strings), dependencies (array of strings).
+{context}
 
-Return ONLY valid JSON array.
+For each recommendation, provide:
+- title: specific, actionable
+- description: 1-2 sentences explaining the recommendation
+- category: one of product|algorithm|ux|education
+- priority: high|medium|low
+- complexity: low|medium|high
+- expected_impact: high|medium|low
+- success_metrics: array of 2-3 measurable metrics
+- dependencies: array of resources or teams needed
+
+Return ONLY valid JSON array. Ensure diversity across categories and unique titles.
 """
         raw = _call_llm(prompt)
         recommendations = self._parse_recommendations(raw, insights)
@@ -130,67 +141,116 @@ Return ONLY valid JSON array.
     def _heuristic_recommendations(self, insights: Dict) -> List[Dict]:
         needs = insights.get("unmet_needs", [])
         patterns = insights.get("patterns", [])
-        recs = [
-            {
-                "title": "Improve recommendation genre diversity",
-                "description": "Expand Discover Weekly and Daily Mix to surface underrepresented genres.",
-                "category": "algorithm",
-                "priority": "high",
-                "complexity": "medium",
-                "expected_impact": "high",
-                "success_metrics": ["repeat-listen rate", "genre diversity score"],
-                "dependencies": ["listening history signals"],
-            },
-            {
-                "title": "Reduce repetitive playlist loops",
-                "description": "Add freshness controls and anti-repetition rules to radio and shuffle.",
-                "category": "product",
-                "priority": "high",
-                "complexity": "medium",
-                "expected_impact": "high",
-                "success_metrics": ["skip rate", "session length"],
-                "dependencies": ["recommendation engine update"],
-            },
-            {
-                "title": "Mood-based discovery entry point",
-                "description": "Launch mood/activity filters on the Discover tab.",
-                "category": "ux",
-                "priority": "medium",
-                "complexity": "medium",
-                "expected_impact": "high",
-                "success_metrics": ["discover tab engagement"],
-                "dependencies": ["UI redesign"],
-            },
-            {
-                "title": "Cross-device listening sync",
-                "description": "Reliable playlist and queue sync across mobile and desktop.",
-                "category": "product",
-                "priority": "high",
-                "complexity": "high",
-                "expected_impact": "medium",
-                "success_metrics": ["sync error rate", "NPS"],
-                "dependencies": ["backend infrastructure"],
-            },
-            {
-                "title": "Educate users on discovery features",
-                "description": "In-app tips for Release Radar, Discover Weekly, and genre browsing.",
-                "category": "education",
-                "priority": "low",
-                "complexity": "low",
-                "expected_impact": "medium",
-                "success_metrics": ["feature adoption rate"],
-                "dependencies": [],
-            },
-        ]
-        if needs:
-            top = needs[0].get("need_description", "")
-            if top:
-                recs[0]["description"] = f"Address top unmet need: {top}"
+        segments = insights.get("segments", [])
+        
+        # Generate diverse recommendations based on actual insights
+        recs = []
+        
+        # Algorithm recommendations based on patterns
         if patterns:
-            recs[1]["description"] = (
-                f"Respond to detected pattern: {patterns[0].get('pattern_description', '')[:120]}"
-            )
-        return self.prioritize_recommendations(recs)
+            for p in patterns[:3]:
+                recs.append({
+                    "title": f"Optimize {p.get('pattern_type', 'discovery')} patterns",
+                    "description": p.get('pattern_description', 'Address detected usage pattern'),
+                    "category": "algorithm",
+                    "priority": "high" if p.get('frequency', 0) > 10 else "medium",
+                    "complexity": "medium",
+                    "expected_impact": "high",
+                    "success_metrics": ["engagement rate", "user satisfaction"],
+                    "dependencies": ["pattern detection system"],
+                })
+        
+        # Product recommendations based on unmet needs
+        if needs:
+            for n in needs[:3]:
+                recs.append({
+                    "title": f"Address: {n.get('need_description', 'User need')[:50]}",
+                    "description": n.get('need_description', 'Improve user experience'),
+                    "category": "product",
+                    "priority": "high" if n.get('priority_score', 0) > 0.7 else "medium",
+                    "complexity": "medium",
+                    "expected_impact": "high" if n.get('strategic_impact') == 'high' else "medium",
+                    "success_metrics": ["feature adoption", "NPS"],
+                    "dependencies": ["product development"],
+                })
+        
+        # UX recommendations based on segments
+        if segments:
+            for s in segments[:2]:
+                challenges = s.get('primary_challenges', [])
+                if challenges:
+                    recs.append({
+                        "title": f"Improve UX for {s.get('segment_name', 'user segment')}",
+                        "description": f"Address challenges: {', '.join(challenges[:2])}",
+                        "category": "ux",
+                        "priority": "medium",
+                        "complexity": "low",
+                        "expected_impact": "medium",
+                        "success_metrics": ["task completion rate", "user satisfaction"],
+                        "dependencies": ["UI/UX team"],
+                    })
+        
+        # Add diverse fallback recommendations if insufficient data
+        if len(recs) < 5:
+            fallback_recs = [
+                {
+                    "title": "Enhance genre diversity in recommendations",
+                    "description": "Expand Discover Weekly to surface underrepresented genres based on listening patterns.",
+                    "category": "algorithm",
+                    "priority": "high",
+                    "complexity": "medium",
+                    "expected_impact": "high",
+                    "success_metrics": ["genre diversity score", "discovery rate"],
+                    "dependencies": ["recommendation engine update"],
+                },
+                {
+                    "title": "Implement smart playlist freshness controls",
+                    "description": "Add user-configurable anti-repetition rules and freshness sliders to radio and shuffle modes.",
+                    "category": "product",
+                    "priority": "high",
+                    "complexity": "medium",
+                    "expected_impact": "high",
+                    "success_metrics": ["skip rate reduction", "session length increase"],
+                    "dependencies": ["playlist algorithm update"],
+                },
+                {
+                    "title": "Launch mood-based discovery filters",
+                    "description": "Add mood and activity-based entry points on the Discover tab for contextual music discovery.",
+                    "category": "ux",
+                    "priority": "medium",
+                    "complexity": "medium",
+                    "expected_impact": "high",
+                    "success_metrics": ["discover tab engagement", "feature adoption"],
+                    "dependencies": ["UI redesign", "mood classification model"],
+                },
+                {
+                    "title": "Improve cross-device listening sync reliability",
+                    "description": "Enhance real-time playlist and queue synchronization across mobile, desktop, and web platforms.",
+                    "category": "product",
+                    "priority": "high",
+                    "complexity": "high",
+                    "expected_impact": "medium",
+                    "success_metrics": ["sync error rate", "cross-platform retention"],
+                    "dependencies": ["backend infrastructure", "sync service"],
+                },
+                {
+                    "title": "Add contextual onboarding for discovery features",
+                    "description": "Implement smart in-app tips and tutorials for Release Radar, Discover Weekly, and genre browsing.",
+                    "category": "education",
+                    "priority": "low",
+                    "complexity": "low",
+                    "expected_impact": "medium",
+                    "success_metrics": ["feature adoption rate", "user engagement"],
+                    "dependencies": ["onboarding system"],
+                },
+            ]
+            # Add only unique fallback recommendations
+            existing_titles = {r.get('title') for r in recs}
+            for fr in fallback_recs:
+                if fr['title'] not in existing_titles and len(recs) < 8:
+                    recs.append(fr)
+        
+        return self.prioritize_recommendations(recs[:8])
 
     def _save_recommendations(self, recommendations: List[Dict]) -> None:
         db = get_session()

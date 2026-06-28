@@ -1,0 +1,451 @@
+================================================================================
+                         COMMANDS REFERENCE
+================================================================================
+
+QUICK START (30 Seconds)
+================================================================================
+
+Terminal 1 - Backend:
+  cd "c:\Graduation Project - Spotify"
+  python scripts/start_backend.py
+
+Terminal 2 - Dashboard:
+  cd "c:\Graduation Project - Spotify\dashboard"
+  npm run dev
+
+Browser:
+  http://localhost:5173
+
+================================================================================
+INSTALLATION
+================================================================================
+
+Backend Dependencies:
+  pip install fastapi uvicorn sqlalchemy psycopg2-binary loguru pydantic-settings
+
+Optional (for advanced features):
+  pip install supabase openai anthropic
+
+Dashboard Dependencies:
+  cd dashboard
+  npm install
+  cd ..
+
+================================================================================
+STARTUP COMMANDS
+================================================================================
+
+Start Backend (Recommended - with verification):
+  python scripts/start_backend.py
+
+Start Backend (Manual):
+  python -m app.api.server
+
+Start Backend (With Hot Reload):
+  uvicorn app.api.server:app --reload --host 0.0.0.0 --port 8000
+
+Start Dashboard:
+  cd dashboard
+  npm run dev
+
+Build Dashboard (Production):
+  cd dashboard
+  npm run build
+
+Preview Production Build:
+  cd dashboard
+  npm run preview
+
+================================================================================
+VALIDATION & DIAGNOSTICS
+================================================================================
+
+Validate Complete Setup:
+  python scripts/validate_setup.py
+
+Diagnose Dashboard:
+  python scripts/diagnose_dashboard.py
+
+Check Configuration:
+  python -c "from config.settings import settings; print(settings.database_url)"
+
+Test Database Connection:
+  psql $DATABASE_URL
+
+================================================================================
+API TESTING
+================================================================================
+
+Health Check:
+  curl http://localhost:8000/health
+
+Get API Summary:
+  curl http://localhost:8000/api/insights/summary
+
+Get Patterns:
+  curl http://localhost:8000/api/insights/patterns
+
+Get Segments:
+  curl http://localhost:8000/api/insights/segments
+
+Get Root Causes:
+  curl http://localhost:8000/api/insights/root-causes
+
+Get Unmet Needs:
+  curl http://localhost:8000/api/insights/unmet-needs
+
+Get Recommendations:
+  curl http://localhost:8000/api/recommendations
+
+Get Sentiment Trends (30 days):
+  curl http://localhost:8000/api/analytics/sentiment-trends?days=30
+
+Get Topic Evolution (30 days):
+  curl http://localhost:8000/api/analytics/topic-evolution?days=30
+
+Trigger Analysis (Generate Insights):
+  curl -X POST http://localhost:8000/api/insights/generate
+
+Generate Report:
+  curl -X POST http://localhost:8000/api/reports/generate
+
+View API Documentation (Swagger):
+  http://localhost:8000/docs
+
+View API Documentation (ReDoc):
+  http://localhost:8000/redoc
+
+================================================================================
+ENVIRONMENT VARIABLES
+================================================================================
+
+View Environment Variables:
+  echo %DATABASE_URL%
+  echo %VITE_API_URL%
+  echo %OPENAI_API_KEY%
+
+Set Environment Variables (Temporary):
+  set DATABASE_URL=postgresql://...
+  set VITE_API_URL=http://localhost:8000
+
+View All App Settings:
+  python -c "from config.settings import settings; import json; print(json.dumps({k: str(v)[:50] for k, v in settings.__dict__.items()}, indent=2))"
+
+================================================================================
+DATABASE OPERATIONS
+================================================================================
+
+Connect to Database:
+  psql $DATABASE_URL
+
+Count Reviews:
+  psql $DATABASE_URL -c "SELECT COUNT(*) FROM raw_reviews"
+
+Count Patterns:
+  psql $DATABASE_URL -c "SELECT COUNT(*) FROM pattern_insights"
+
+Count Segments:
+  psql $DATABASE_URL -c "SELECT COUNT(*) FROM user_segments"
+
+List All Tables:
+  psql $DATABASE_URL -c "\dt"
+
+View Table Schema:
+  psql $DATABASE_URL -c "\d table_name"
+
+Query Raw Data:
+  psql $DATABASE_URL -c "SELECT * FROM raw_reviews LIMIT 10"
+
+Clear Insights (WARNING: Destructive):
+  python -c "from app.services.insight_store import InsightStore; InsightStore().clear_insights()"
+
+================================================================================
+ANALYSIS & PROCESSING
+================================================================================
+
+Run Analysis Pipeline:
+  python -c "from app.services.insight_engine import InsightEngine; InsightEngine().run()"
+
+Run Pattern Detection Only:
+  python -c "from app.services.pattern_detection import TemporalPatternDetector; print(TemporalPatternDetector().detect_trends())"
+
+Run Segmentation Only:
+  python -c "from app.services.segmentation import UserSegmentationEngine; print(UserSegmentationEngine().segment_by_listening_behavior())"
+
+Generate Recommendations:
+  python -c "from app.services.recommendation_engine import RecommendationEngine; print(RecommendationEngine().generate_recommendations())"
+
+Process Batch Reviews:
+  python -c "from app.services.processor import BatchProcessor; BatchProcessor().process_batch(500)"
+
+================================================================================
+LOGGING & MONITORING
+================================================================================
+
+View Backend Logs (Real-time):
+  tail -f logs/backend.log
+
+View Backend Logs (Last 100 lines):
+  tail -100 logs/backend.log
+
+Search Logs for Errors:
+  grep ERROR logs/backend.log
+
+Search Logs for a Pattern:
+  grep "pattern" logs/backend.log
+
+View Metrics:
+  curl http://localhost:8000/metrics
+
+Monitor Dashboard Network (Open DevTools):
+  1. Press F12
+  2. Go to Network tab
+  3. Reload page
+  4. Look for requests to http://localhost:8000/api/...
+  5. All should return status 200
+
+================================================================================
+FILE MANAGEMENT
+================================================================================
+
+View Project Structure:
+  tree . /L 2
+
+View Dashboard Files:
+  ls dashboard/src/
+
+View Backend API Routes:
+  ls app/api/
+
+View Backend Services:
+  ls app/services/
+
+View Database Models:
+  cat app/database/models.py | grep "^class"
+
+View Generated Reports:
+  ls -lah reports/
+
+Export Latest Report:
+  ls -t reports/ | head -1
+
+================================================================================
+DEVELOPMENT
+================================================================================
+
+Format Code (Python):
+  black app/
+
+Lint Python Code:
+  flake8 app/ --max-line-length=120
+
+Format TypeScript/React:
+  cd dashboard && npm run format
+
+Lint TypeScript/React:
+  cd dashboard && npm run lint
+
+Run Type Check (TypeScript):
+  cd dashboard && npx tsc --noEmit
+
+Build TypeScript:
+  cd dashboard && npm run build
+
+================================================================================
+DEPLOYMENT
+================================================================================
+
+Build for Production:
+  cd dashboard && npm run build
+
+Start Production Backend (Gunicorn):
+  gunicorn -w 4 -b 0.0.0.0:8000 app.api.server:app
+
+Start Production Backend (Uvicorn):
+  uvicorn app.api.server:app --host 0.0.0.0 --port 8000 --workers 4
+
+Start Production Dashboard:
+  cd dashboard && npm run preview
+
+Create Production Build Archive:
+  tar czf spotify-dashboard-prod.tar.gz dashboard/dist/
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Fix Python Module Not Found:
+  set PYTHONPATH=%CD%
+  python scripts/start_backend.py
+
+Fix npm Module Not Found:
+  cd dashboard && npm install
+
+Fix Database Connection:
+  python -c "from app.database.connection import init_db; init_db()"
+
+Clear npm Cache:
+  npm cache clean --force
+
+Reinstall Dashboard Dependencies:
+  cd dashboard && rm -r node_modules && npm install
+
+Restart Everything:
+  # Kill all processes
+  pkill -f "python scripts/start_backend.py"
+  pkill -f "npm run dev"
+  
+  # Start fresh
+  python scripts/start_backend.py
+  cd dashboard && npm run dev
+
+Fix CORS Issues:
+  # Already configured in app/api/server.py
+  # If still issues, verify backend is running on http://localhost:8000
+
+Fix "Port Already in Use":
+  # Port 8000 in use
+  lsof -i :8000
+  kill -9 <PID>
+  
+  # Port 5173 in use (dashboard)
+  lsof -i :5173
+  kill -9 <PID>
+
+================================================================================
+USEFUL ONE-LINERS
+================================================================================
+
+Check Everything is Running:
+  curl http://localhost:8000/health && echo && curl http://localhost:5173 2>/dev/null && echo "Dashboard OK"
+
+Get Count of All Tables:
+  for table in raw_reviews sentiment_analysis topic_analysis pattern_insights user_segments recommendations; do echo -n "$table: "; psql $DATABASE_URL -c "SELECT COUNT(*) FROM $table" --csv | tail -1; done
+
+Generate Sample Report:
+  python -c "from app.services.report_generator import ReportGenerator; r = ReportGenerator(); print(r.render_report('executive'))" > sample_report.md
+
+Watch Analysis Progress:
+  watch -n 5 'psql $DATABASE_URL -c "SELECT COUNT(*) FROM pattern_insights; SELECT COUNT(*) FROM user_segments;"'
+
+Find Latest Report:
+  ls -lt reports/*.md | head -1 | awk '{print $NF}' | xargs cat
+
+All API Endpoints Summary:
+  curl http://localhost:8000/docs 2>/dev/null | grep -o '"path":"[^"]*"' | sort | uniq
+
+================================================================================
+ENVIRONMENT SETUP
+================================================================================
+
+Load .env Variables (Bash):
+  export $(cat .env | grep -v '^#' | xargs)
+
+Load .env Variables (PowerShell):
+  Get-Content .env | ForEach-Object { if ($_) { $var = $_.Split('='); [Environment]::SetEnvironmentVariable($var[0], $var[1]) } }
+
+View Currently Set Variables:
+  env | grep -E "DATABASE|API|VITE|OPENAI|ANTHROPIC"
+
+Reset to Default Settings:
+  rm .env
+  cp .env.example .env
+
+================================================================================
+USEFUL LINKS
+================================================================================
+
+Local URLs:
+  Backend:                    http://localhost:8000
+  API Documentation:          http://localhost:8000/docs
+  ReDoc:                      http://localhost:8000/redoc
+  Dashboard:                  http://localhost:5173
+  Metrics:                    http://localhost:8000/metrics
+
+Documentation Files:
+  Quick Start:                QUICK_START.md
+  Setup Guide:                SETUP_SUPABASE_BACKEND.md
+  Architecture:               ARCHITECTURE_ANALYSIS.md
+  Configuration:              CONFIGURATION_COMPLETE.md
+  Connection Details:         ANSWER_YOUR_QUESTION.md
+
+================================================================================
+KEYBOARD SHORTCUTS
+================================================================================
+
+Stop Server:
+  Press Ctrl+C
+
+Hot Reload Backend:
+  Save a Python file (auto-reloads if --reload flag used)
+
+Reload Dashboard:
+  Browser: Ctrl+R or Cmd+R
+  Hard Reload: Ctrl+Shift+R or Cmd+Shift+R
+
+Open DevTools:
+  F12 or Right-click → Inspect
+
+Open Command Palette (VSCode):
+  Ctrl+Shift+P
+
+Terminal in VSCode:
+  Ctrl+`
+
+Open Dashboard in Browser:
+  http://localhost:5173
+
+View API Docs:
+  http://localhost:8000/docs (Swagger)
+  http://localhost:8000/redoc (ReDoc)
+
+================================================================================
+EMERGENCY COMMANDS
+================================================================================
+
+Kill Backend Process:
+  taskkill /IM python.exe /F
+
+Kill Dashboard Process:
+  taskkill /IM node.exe /F
+
+Clear Database Cache:
+  python -c "from sqlalchemy import create_engine; from config.settings import settings; create_engine(settings.database_url).dispose()"
+
+Reset Everything:
+  taskkill /IM python.exe /F & taskkill /IM node.exe /F & python scripts/start_backend.py & cd dashboard && npm run dev
+
+Full System Reset:
+  rm -r logs/* reports/* && rm dashboard/.env && cp .env.example .env && python scripts/start_backend.py
+
+================================================================================
+STATUS COMMANDS
+================================================================================
+
+Check Backend Status:
+  curl -s http://localhost:8000/health | python -m json.tool
+
+Check Dashboard Status:
+  curl -s http://localhost:5173 | head -1
+
+Check Database Status:
+  psql $DATABASE_URL -c "SELECT 1"
+
+Check All Systems:
+  python scripts/diagnose_dashboard.py
+
+View System Resources (Dashboard):
+  top (or Task Manager on Windows)
+
+View Process List:
+  ps aux | grep python
+  ps aux | grep node
+
+================================================================================
+END OF REFERENCE
+================================================================================
+
+For more information, see the documentation files:
+  - QUICK_START.md
+  - SETUP_SUPABASE_BACKEND.md
+  - CONFIGURATION_COMPLETE.md

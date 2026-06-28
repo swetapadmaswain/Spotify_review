@@ -59,14 +59,15 @@ class UnmetNeedsDetector:
         pass
 
     def detect_feature_requests(self) -> List[Dict]:
-        """Pull feature-related mentions from entity analysis."""
+        """Pull feature-related mentions from reviews and entity analysis."""
         db = get_session()
         try:
+            # Try entity-based approach first
             result = db.execute(text("""
                 SELECT
                     e.entities->>'music_features' AS feature,
                     COUNT(*) AS request_count,
-                    AVG(s.confidence) AS avg_confidence,
+                    AVG(CAST(s.confidence AS FLOAT)) AS avg_confidence,
                     t.primary_topic
                 FROM entity_analysis e
                 JOIN sentiment_analysis s ON e.review_id = s.review_id
@@ -75,13 +76,42 @@ class UnmetNeedsDetector:
                   AND e.entities->>'music_features' IS NOT NULL
                 GROUP BY e.entities->>'music_features', t.primary_topic
                 ORDER BY request_count DESC
+                LIMIT 50
+            """))
+            rows = result.fetchall()
+            keys = result.keys()
+            requests = [dict(zip(keys, row)) for row in rows]
+            
+            if requests:
+                logger.info(f"UnmetNeedsDetector: {len(requests)} feature request groups found from entities")
+                return requests
+                
+            # Fallback: search review text for common feature request keywords
+            result = db.execute(text("""
+                SELECT
+                    CASE 
+                        WHEN r.review_text ILIKE '%recommend%' THEN 'Better recommendations'
+                        WHEN r.review_text ILIKE '%playlist%' THEN 'Playlist features'
+                        WHEN r.review_text ILIKE '%genre%' THEN 'Genre control'
+                        WHEN r.review_text ILIKE '%discover%' THEN 'Discovery features'
+                        WHEN r.review_text ILIKE '%mood%' THEN 'Mood-based features'
+                        ELSE 'General improvements'
+                    END AS feature,
+                    COUNT(*) AS request_count,
+                    MAX(t.primary_topic) AS primary_topic
+                FROM raw_reviews r
+                LEFT JOIN topic_analysis t ON r.id = t.review_id
+                WHERE r.review_text IS NOT NULL
+                GROUP BY feature
+                ORDER BY request_count DESC
                 LIMIT 20
             """))
             rows = result.fetchall()
             keys = result.keys()
             requests = [dict(zip(keys, row)) for row in rows]
-            logger.info(f"UnmetNeedsDetector: {len(requests)} feature request groups found")
+            logger.info(f"UnmetNeedsDetector: {len(requests)} feature groups found from text search")
             return requests
+            
         except Exception as e:
             logger.error(f"Error detecting feature requests: {e}")
             return []
@@ -172,38 +202,42 @@ class GapAnalyzer:
         """LLM-powered gap analysis using discovery-related feedback."""
         db = get_session()
         try:
+            # Get up to 200 relevant reviews
             result = db.execute(text("""
-                SELECT r.content
-                FROM processed_reviews r
-                JOIN topic_analysis t ON r.id = t.review_id
-                WHERE t.primary_topic IN ('recommendations', 'content', 'feature')
-                LIMIT 20
+                SELECT r.review_text AS content
+                FROM raw_reviews r
+                LEFT JOIN topic_analysis t ON r.id = t.review_id
+                WHERE t.primary_topic IN ('recommendations', 'content', 'feature', 'discovery')
+                   OR r.review_text ILIKE '%discover%'
+                   OR r.review_text ILIKE '%recommend%'
+                   OR r.review_text ILIKE '%feature%'
+                LIMIT 200
             """))
             rows = result.fetchall()
-            feedback = [row[0] for row in rows]
+            feedback = [row[0] for row in rows] if rows else []
         except Exception as e:
             logger.error(f"Error fetching discovery feedback: {e}")
             feedback = []
         finally:
             db.close()
 
-        context = "\n".join(feedback[:10]) if feedback else "No discovery-related feedback yet."
+        context = "\n---\n".join(feedback[:50]) if feedback else "No discovery-related feedback yet."
 
         prompt = f"""
-Analyze user feedback to identify capability gaps in Spotify's music discovery:
+Analyze user feedback to identify capability gaps in Spotify's music discovery (analyzed {len(feedback)} reviews):
 
 Sample feedback:
 {context}
 
 Compare:
-1. What users want to do
-2. What current features allow
-3. Where the gaps exist
+1. What users want to do (explicit requests)
+2. What current features allow (implied limitations)
+3. Where the gaps exist (unsolved problems)
 
-Focus on music discovery capabilities. Be specific and actionable.
+Focus on music discovery capabilities. Be specific and cite patterns from the data.
 """
         gap_analysis = _call_llm(prompt)
-        logger.info("GapAnalyzer: gap analysis complete")
+        logger.info(f"GapAnalyzer: gap analysis complete using {len(feedback)} reviews")
         return {
             "feedback_count": len(feedback),
             "gap_analysis": gap_analysis

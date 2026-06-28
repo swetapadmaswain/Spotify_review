@@ -35,34 +35,44 @@ class RawDataMetadata(Base):
         return f"<RawDataMetadata(id={self.id}, source={self.source}, processed={self.processed})>"
 
 
-class ProcessedReview(Base):
-    """Store processed review data"""
-    __tablename__ = 'processed_reviews'
+class RawReview(Base):
+    """Store raw review data - matches Supabase raw_reviews table"""
+    __tablename__ = 'raw_reviews'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    source_id = Column(String(255), nullable=True)  # Original ID from source
+    id = Column(String(36), primary_key=True)  # UUID from Supabase
     source = Column(String(50), nullable=False)
-    title = Column(Text, nullable=True)
-    content = Column(Text, nullable=False)
-    author = Column(String(255), nullable=True)
+    review_text = Column(Text, nullable=False)
     rating = Column(Integer, nullable=True)
-    score = Column(Integer, nullable=True)  # For Reddit/social media
-    version = Column(String(50), nullable=True)
-    url = Column(String(500), nullable=True)
-    subreddit = Column(String(100), nullable=True)  # For Reddit
-    created_at = Column(DateTime(timezone=True), nullable=True)
-    collected_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    author = Column(String(255), nullable=True)
+    date = Column(DateTime(timezone=True), nullable=True)
+    metadata = Column(JSON, nullable=True)
+    collection_run_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     def __repr__(self):
-        return f"<ProcessedReview(id={self.id}, source={self.source}, author={self.author})>"
+        return f"<RawReview(id={self.id}, source={self.source}, author={self.author})>"
+
+
+class ProcessedReview(Base):
+    """Store processed review data with content and processing metadata"""
+    __tablename__ = 'processed_reviews'
+    
+    id = Column(String(36), primary_key=True)  # UUID from raw_reviews
+    content = Column(Text, nullable=False)
+    source = Column(String(50), nullable=False)
+    author = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    def __repr__(self):
+        return f"<ProcessedReview(id={self.id}, source={self.source})>"
 
 
 class SentimentAnalysis(Base):
     """Store sentiment analysis results for a review"""
     __tablename__ = 'sentiment_analysis'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    review_id = Column(Integer, ForeignKey('processed_reviews.id'), nullable=True)
+    id = Column(String(36), primary_key=True)  # UUID from Supabase
+    review_id = Column(String(36), ForeignKey('raw_reviews.id', ondelete='CASCADE'), nullable=True)
     sentiment = Column(String(20), nullable=True)
     confidence = Column(Float, nullable=True)
     emotion = Column(String(50), nullable=True)
@@ -77,8 +87,8 @@ class TopicAnalysis(Base):
     """Store topic analysis results for a review"""
     __tablename__ = 'topic_analysis'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    review_id = Column(Integer, ForeignKey('processed_reviews.id'), nullable=True)
+    id = Column(String(36), primary_key=True)  # UUID from Supabase
+    review_id = Column(String(36), ForeignKey('raw_reviews.id', ondelete='CASCADE'), nullable=True)
     primary_topic = Column(String(100), nullable=True)
     secondary_topics = Column(JSON, nullable=True)
     relevance_scores = Column(JSON, nullable=True)
@@ -92,8 +102,8 @@ class EntityAnalysis(Base):
     """Store entity analysis results for a review"""
     __tablename__ = 'entity_analysis'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    review_id = Column(Integer, ForeignKey('processed_reviews.id'), nullable=True)
+    id = Column(String(36), primary_key=True)  # UUID from Supabase
+    review_id = Column(String(36), ForeignKey('raw_reviews.id', ondelete='CASCADE'), nullable=True)
     entities = Column(JSON, nullable=True)
     entity_types = Column(JSON, nullable=True)
     analyzed_at = Column(DateTime(timezone=True), server_default=func.now())

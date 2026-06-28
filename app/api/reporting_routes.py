@@ -65,8 +65,11 @@ async def get_roadmap(_: bool = Depends(require_auth)):
 @router.get("/api/analytics/sentiment-trends")
 async def get_sentiment_trends(days: int = 30):
     try:
-        return {"success": True, "data": analytics_store.get_sentiment_trends(days)}
+        data = analytics_store.get_sentiment_trends(days)
+        logger.info(f"sentiment_trends: returned {len(data)} records")
+        return {"success": True, "data": data}
     except Exception as e:
+        logger.error(f"Error getting sentiment trends: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

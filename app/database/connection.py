@@ -10,23 +10,49 @@ engine = None
 SessionLocal = None
 
 
+def get_database_url() -> str:
+    """
+    Get database URL from settings.
+    Supports both direct postgres URL and Supabase configuration
+    """
+    # If DATABASE_URL is explicitly set, use it
+    if settings.database_url and settings.database_url != "postgresql://user:password@localhost:5432/spotify_reviews":
+        return settings.database_url
+    
+    # Try to build from Supabase config
+    if settings.supabase_url:
+        try:
+            from app.database.supabase_config import get_supabase_config
+            config = get_supabase_config()
+            url = config.get_connection_string()
+            logger.info(f"Using Supabase PostgreSQL: {config.db_host}")
+            return url
+        except Exception as e:
+            logger.warning(f"Could not use Supabase config: {e}, falling back to DATABASE_URL")
+    
+    # Fallback to settings
+    return settings.database_url
+
+
 def init_db():
     """Initialize database connection and create tables"""
     global engine, SessionLocal
     
     try:
-        engine = create_engine(settings.database_url, echo=False)
+        db_url = get_database_url()
+        engine = create_engine(db_url, echo=False, pool_pre_ping=True)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         
         # Create all tables
         from .models import Base
         Base.metadata.create_all(bind=engine)
         
-        logger.info("Database initialized successfully")
+        logger.info(f"✅ Database initialized successfully")
+        logger.info(f"   Connection: {db_url[:50]}...")
         return True
         
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.error(f"❌ Failed to initialize database: {e}")
         return False
 
 

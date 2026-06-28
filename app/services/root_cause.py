@@ -22,22 +22,24 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
 
 
-def _fetch_negative_feedback_by_topic(topic: str, limit: int = 20) -> List[str]:
+def _fetch_negative_feedback_by_topic(topic: str, limit: int = 100) -> List[str]:
     """Fetch review content for a given topic with negative sentiment."""
     db = get_session()
     try:
         result = db.execute(text("""
-            SELECT r.content
-            FROM processed_reviews r
-            JOIN topic_analysis t ON r.id = t.review_id
-            JOIN sentiment_analysis s ON r.id = s.review_id
-            WHERE t.primary_topic = :topic AND s.sentiment = 'negative'
+            SELECT r.review_text AS content
+            FROM raw_reviews r
+            LEFT JOIN topic_analysis t ON r.id = t.review_id
+            LEFT JOIN sentiment_analysis s ON r.id = s.review_id
+            WHERE (t.primary_topic = :topic OR :topic = 'all')
+              AND (s.sentiment = 'negative' OR s.sentiment IS NULL)
+              AND r.review_text IS NOT NULL
             LIMIT :limit
         """), {"topic": topic, "limit": limit})
         rows = result.fetchall()
-        return [row[0] for row in rows]
+        return [row[0] for row in rows] if rows else []
     except Exception as e:
-        logger.error(f"Error fetching feedback: {e}")
+        logger.error(f"Error fetching feedback for {topic}: {e}")
         return []
     finally:
         db.close()
@@ -120,7 +122,7 @@ Respond concisely.
                     AVG(s.confidence) AS avg_confidence
                 FROM topic_analysis t
                 JOIN sentiment_analysis s ON t.review_id = s.review_id
-                JOIN processed_reviews r ON t.review_id = r.id
+                JOIN raw_reviews r ON t.review_id = r.id
                 WHERE s.sentiment = 'negative'
                 GROUP BY t.primary_topic
                 HAVING COUNT(DISTINCT r.source) >= 1
@@ -164,27 +166,29 @@ class RepetitiveBehaviorAnalyzer:
         db = get_session()
         try:
             result = db.execute(text("""
-                SELECT r.content
-                FROM processed_reviews r
-                JOIN entity_analysis e ON r.id = e.review_id
-                WHERE e.entities::text ILIKE '%repeat%'
-                   OR e.entities::text ILIKE '%same song%'
-                   OR e.entities::text ILIKE '%loop%'
-                LIMIT 15
+                SELECT r.review_text AS content
+                FROM raw_reviews r
+                LEFT JOIN entity_analysis e ON r.id = e.review_id
+                WHERE r.review_text ILIKE '%repeat%'
+                   OR r.review_text ILIKE '%same song%'
+                   OR r.review_text ILIKE '%loop%'
+                   OR r.review_text ILIKE '%stuck%'
+                   OR r.review_text ILIKE '%stuck on%'
+                LIMIT 100
             """))
             rows = result.fetchall()
-            feedback = [row[0] for row in rows]
+            feedback = [row[0] for row in rows] if rows else []
         except Exception as e:
             logger.error(f"Error fetching repetition feedback: {e}")
             feedback = []
         finally:
             db.close()
 
-        context = "\n".join(feedback[:10]) if feedback else "No specific repetition feedback found."
+        context = "\n".join(feedback[:20]) if feedback else "No specific repetition feedback found."
         prompt = f"""
 Based on user feedback, analyze drivers of repetitive listening behavior:
 
-Sample feedback:
+Sample feedback ({len(feedback)} reviews):
 {context}
 
 Identify:
@@ -192,6 +196,8 @@ Identify:
 2. Technical drivers (UI friction, poor recommendations)
 3. Content drivers (lack of new content, preference for familiar)
 4. Context drivers (workout, study, background music)
+
+Be specific about what patterns you see in the data.
 """
         analysis = _call_llm(prompt)
         logger.info("RepetitiveBehaviorAnalyzer: analysis complete")

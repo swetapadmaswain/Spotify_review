@@ -130,10 +130,23 @@ class ReportGenerator:
         summary = self.insight_store.get_summary()
         sentiment = self.analytics_store.get_sentiment_distribution()
         dominant = sentiment[0]["sentiment"] if sentiment else "unknown"
+        
+        # Add total reviews count
+        from app.database.connection import get_session
+        from sqlalchemy import text
+        db = get_session()
+        try:
+            result = db.execute(text("SELECT COUNT(*) as count FROM raw_reviews"))
+            total_reviews = result.fetchone()[0] if result else 0
+            summary["total_reviews"] = total_reviews
+        finally:
+            db.close()
+        
         return {
             "overview": (
-                f"Analysis of {summary.get('pattern_count', 0)} patterns across "
-                f"{summary.get('segment_count', 0)} user segments reveals "
+                f"Analysis of {summary.get('total_reviews', 0)} reviews revealed "
+                f"{summary.get('pattern_count', 0)} patterns across "
+                f"{summary.get('segment_count', 0)} user segments with "
                 f"dominant {dominant} sentiment and critical discovery gaps."
             ),
             **summary,
