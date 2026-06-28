@@ -47,7 +47,7 @@ export default function SegmentDashboard({ data }: Props) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  onClick={(d) => setSelected((d as { segment: Segment }).segment)}
+                  onClick={(d: any) => setSelected(d?.segment)}
                   className="cursor-pointer"
                 >
                   {pieData.map((entry, i) => (
