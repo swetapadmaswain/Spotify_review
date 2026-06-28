@@ -86,8 +86,9 @@ export default function App() {
       setRecommendations(rec);
       setRoadmap(rm);
       setLastUpdated(new Date());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load data');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load data';
+      setError(message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -113,7 +114,8 @@ export default function App() {
   const handleExportReport = async () => {
     try {
       const result = await api.generateReport();
-      showToast(`Report saved: ${result.file_path || 'reports/'}`);
+      const filePath = result?.file_path || 'reports/';
+      showToast(`Report saved: ${filePath}`);
     } catch {
       showToast('Report generation failed');
     }

@@ -86,6 +86,16 @@ export interface RoadmapItem {
   estimated_effort: string;
 }
 
+export interface SentimentDistribution {
+  sentiment: string;
+  count: number;
+}
+
+export interface ReportResult {
+  file_path: string;
+  status: string;
+}
+
 export const api = {
   getSummary: async (): Promise<InsightSummary> => {
     return fetchJson<InsightSummary>('/api/insights/summary');
@@ -123,8 +133,8 @@ export const api = {
     return fetchJson<RoadmapItem[]>('/api/roadmap');
   },
   
-  getSentimentDistribution: async () => {
-    return fetchJson('/api/analytics/sentiment-distribution');
+  getSentimentDistribution: async (): Promise<SentimentDistribution[]> => {
+    return fetchJson<SentimentDistribution[]>('/api/analytics/sentiment-distribution');
   },
   
   getTopTopics: async (limit = 8) => {
@@ -139,8 +149,8 @@ export const api = {
     });
   },
 
-  generateReport: async () => {
-    return fetchJson('/api/reports/generate', {
+  generateReport: async (): Promise<ReportResult> => {
+    return fetchJson<ReportResult>('/api/reports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
