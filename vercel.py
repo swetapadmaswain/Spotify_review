@@ -2,21 +2,9 @@
 Vercel Serverless Function Entry Point for FastAPI Backend
 
 This file bridges Vercel's serverless environment with your FastAPI application.
-
-Deployment:
-1. Add to vercel.json:
-   {
-     "builds": [
-       { "src": "vercel.py", "use": "@vercel/python" }
-     ],
-     "routes": [
-       { "src": "/(.*)", "dest": "vercel.py" }
-     ]
-   }
-
-2. Deploy: vercel --prod
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -24,13 +12,25 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-# Import your FastAPI app
-from app.api.server import app
+# Set environment variables from Vercel
+os.environ.setdefault('API_HOST', '0.0.0.0')
+os.environ.setdefault('API_PORT', '8000')
 
-# Vercel handler
-handler = app
+try:
+    # Import your FastAPI app
+    from app.api.server import app as fastapi_app
+    handler = fastapi_app
+except Exception as e:
+    # Fallback handler for debugging
+    def fallback_handler(event, context):
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": f"Error loading app: {str(e)}"
+        }
+    handler = fallback_handler
 
-# For local testing with serverless
+# For local testing
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
