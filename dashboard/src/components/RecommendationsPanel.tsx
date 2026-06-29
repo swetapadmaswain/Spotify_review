@@ -27,8 +27,8 @@ export default function RecommendationsPanel({ recommendations, roadmap }: Props
     : recommendations.filter(r => r.priority === filter);
 
   const sortedRecs = [...filteredRecs].sort((a, b) => {
-    const priorityScore = { high: 3, medium: 2, low: 1 };
-    const priorityDiff = priorityScore[b.priority] - priorityScore[a.priority];
+    const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 };
+    const priorityDiff = (priorityScore[b.priority] || 0) - (priorityScore[a.priority] || 0);
     if (priorityDiff !== 0) return priorityDiff;
     return (complexityOrder[a.complexity] || 2) - (complexityOrder[b.complexity] || 2);
   });

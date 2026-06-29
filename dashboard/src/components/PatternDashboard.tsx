@@ -48,25 +48,25 @@ export default function PatternDashboard({ data }: Props) {
           variant={filter === null ? 'primary' : 'ghost'}
           onClick={() => { setFilter(null); setSelected(null); }}
         >
-          All Patterns ({uniquePatterns.length})
+          All Patterns ({data.length})
         </Button>
         <Button
           variant={filter === 'temporal' ? 'primary' : 'ghost'}
           onClick={() => { setFilter('temporal'); setSelected(null); }}
         >
-          ⏰ Temporal ({uniquePatterns.filter((p) => p.pattern_type === 'temporal').length})
+          ⏰ Temporal ({data.filter((p: Pattern) => p.pattern_type === 'temporal').length})
         </Button>
         <Button
           variant={filter === 'thematic' ? 'primary' : 'ghost'}
           onClick={() => { setFilter('thematic'); setSelected(null); }}
         >
-          📝 Thematic ({uniquePatterns.filter((p) => p.pattern_type === 'thematic').length})
+          📝 Thematic ({data.filter((p: Pattern) => p.pattern_type === 'thematic').length})
         </Button>
         <Button
           variant={filter === 'cross_platform' ? 'primary' : 'ghost'}
           onClick={() => { setFilter('cross_platform'); setSelected(null); }}
         >
-          🌐 Cross-Platform ({uniquePatterns.filter((p) => p.pattern_type === 'cross_platform').length})
+          🌐 Cross-Platform ({data.filter((p: Pattern) => p.pattern_type === 'cross_platform').length})
         </Button>
       </div>
 
