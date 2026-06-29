@@ -108,23 +108,13 @@ export default function App() {
 
   const handleRunAnalysis = async () => {
     setAnalyzing(true);
-    setAnalysisTimeout(false);
-    const timeoutId = setTimeout(() => {
-      setAnalysisTimeout(true);
-      showToast('Analysis is taking longer than expected — please wait...');
-    }, 10000);
     try {
-      await api.generateInsights(true);
-      showToast('AI analysis complete — refreshing insights...');
-      await new Promise((r) => setTimeout(r, 2000));
       await loadData(true);
+      showToast('Data has been reanalysed');
     } catch (e: any) {
-      console.error('Analysis error:', e);
-      showToast(`Analysis failed: ${e?.message || 'Unknown error'}`);
+      showToast('Failed to refresh data');
     } finally {
-      clearTimeout(timeoutId);
       setAnalyzing(false);
-      setAnalysisTimeout(false);
     }
   };
 
