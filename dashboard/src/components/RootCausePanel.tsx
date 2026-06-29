@@ -56,20 +56,20 @@ export default function RootCausePanel({ data }: Props) {
                   </p>
                 </div>
 
-                {active.root_causes?.intermediate_factors && typeof active.root_causes.intermediate_factors === 'string' && (
+                {active.root_causes?.intermediate_factors && (
                   <div className="p-3 rounded-lg bg-white/5">
                     <p className="text-xs text-muted mb-1">Contributing Factors</p>
                     <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">
-                      {active.root_causes.intermediate_factors}
+                      {String(active.root_causes.intermediate_factors)}
                     </p>
                   </div>
                 )}
 
-                {active.root_causes?.suggested_fixes && typeof active.root_causes.suggested_fixes === 'string' && (
+                {active.root_causes?.suggested_fixes && (
                   <div className="p-3 rounded-lg bg-spotify/10 border border-spotify/20">
                     <p className="text-xs text-spotify mb-1">💡 Suggested Fixes</p>
                     <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">
-                      {active.root_causes.suggested_fixes}
+                      {String(active.root_causes.suggested_fixes)}
                     </p>
                   </div>
                 )}

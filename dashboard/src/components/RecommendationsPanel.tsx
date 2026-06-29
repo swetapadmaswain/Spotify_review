@@ -15,7 +15,7 @@ const priorityVariant: Record<string, 'danger' | 'warning' | 'success'> = {
   low: 'success',
 };
 
-const complexityOrder = { 'low': 1, 'medium': 2, 'high': 3 };
+const complexityOrder: Record<string, number> = { 'low': 1, 'medium': 2, 'high': 3 };
 
 export default function RecommendationsPanel({ recommendations, roadmap }: Props) {
   const [expanded, setExpanded] = useState<number | null>(0);
@@ -27,7 +27,7 @@ export default function RecommendationsPanel({ recommendations, roadmap }: Props
     : recommendations.filter(r => r.priority === filter);
 
   const sortedRecs = [...filteredRecs].sort((a, b) => {
-    const priorityScore = { high: 3, medium: 2, low: 1 };
+    const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 };
     const priorityDiff = priorityScore[b.priority] - priorityScore[a.priority];
     if (priorityDiff !== 0) return priorityDiff;
     return (complexityOrder[a.complexity] || 2) - (complexityOrder[b.complexity] || 2);
@@ -71,28 +71,24 @@ export default function RecommendationsPanel({ recommendations, roadmap }: Props
             <Button
               variant={filter === 'all' ? 'primary' : 'ghost'}
               onClick={() => setFilter('all')}
-              size="sm"
             >
               All ({recommendations.length})
             </Button>
             <Button
               variant={filter === 'high' ? 'primary' : 'ghost'}
               onClick={() => setFilter('high')}
-              size="sm"
             >
               🔥 High ({recommendations.filter(r => r.priority === 'high').length})
             </Button>
             <Button
               variant={filter === 'medium' ? 'primary' : 'ghost'}
               onClick={() => setFilter('medium')}
-              size="sm"
             >
               ⚡ Medium ({recommendations.filter(r => r.priority === 'medium').length})
             </Button>
             <Button
               variant={filter === 'low' ? 'primary' : 'ghost'}
               onClick={() => setFilter('low')}
-              size="sm"
             >
               📌 Low ({recommendations.filter(r => r.priority === 'low').length})
             </Button>
@@ -218,7 +214,7 @@ export default function RecommendationsPanel({ recommendations, roadmap }: Props
                               <p className="text-xs text-muted mb-1">Dependencies:</p>
                               <div className="flex flex-wrap gap-1">
                                 {item.dependencies.map((dep, j) => (
-                                  <Badge key={j} label={dep} variant="default" size="sm" />
+                                  <Badge key={j} label={dep} variant="default" />
                                 ))}
                               </div>
                             </div>

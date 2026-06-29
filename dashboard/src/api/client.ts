@@ -81,7 +81,12 @@ export interface UnmetNeed {
 export interface RootCause {
   id: number;
   issue_topic: string;
-  root_causes: Record<string, unknown>;
+  root_causes: {
+    analysis?: string;
+    intermediate_factors?: string;
+    suggested_fixes?: string;
+    [key: string]: string | undefined;
+  };
   confidence: number;
 }
 
