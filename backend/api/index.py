@@ -15,8 +15,8 @@ app.add_middleware(
 )
 
 def get_supabase():
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
+    url = (os.environ.get("SUPABASE_URL") or "").strip()
+    key = (os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
     if not url or not key:
         raise Exception("Missing SUPABASE_URL or SUPABASE_KEY environment variables")
     return create_client(url, key)
