@@ -110,7 +110,7 @@ export default function App() {
     setAnalyzing(true);
     try {
       await loadData(true);
-      showToast('Data has been reanalysed');
+      showToast('Data has been refreshed');
     } catch (e: any) {
       showToast('Failed to refresh data');
     } finally {
