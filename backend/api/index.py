@@ -142,3 +142,23 @@ async def get_sentiment_trends(days: int = 30):
         return {"success": True, "data": result.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/topic-evolution")
+async def get_topic_evolution(days: int = 30):
+    try:
+        db = get_supabase()
+        result = db.table("pattern_insights").select("pattern_type,discovered_at,frequency").order("discovered_at", desc=True).limit(100).execute()
+        return {"success": True, "data": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/top-topics")
+async def get_top_topics(limit: int = 10):
+    try:
+        db = get_supabase()
+        result = db.table("pattern_insights").select("pattern_type,frequency").order("frequency", desc=True).limit(limit).execute()
+        return {"success": True, "data": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
