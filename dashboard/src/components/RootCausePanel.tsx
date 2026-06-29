@@ -20,7 +20,7 @@ export default function RootCausePanel({ data }: Props) {
         </p>
       </div>
       {data.length === 0 ? (
-        <p className="text-muted text-sm">No root cause analyses yet. Run AI analysis to generate insights.</p>
+        <p className="text-muted text-sm">No root cause analyses yet.</p>
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
           <div className="space-y-2">

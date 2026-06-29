@@ -18,7 +18,7 @@ export default function UnmetNeedsPanel({ data }: Props) {
         </p>
       </div>
       {sorted.length === 0 ? (
-        <p className="text-muted text-sm">No unmet needs detected. Run AI analysis to identify user requests.</p>
+        <p className="text-muted text-sm">No unmet needs detected.</p>
       ) : (
         <div className="space-y-3">
           {sorted.map((need, i) => (

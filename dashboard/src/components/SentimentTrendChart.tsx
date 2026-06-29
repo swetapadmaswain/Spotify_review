@@ -49,7 +49,7 @@ export default function SentimentTrendChart({ data, days, onDaysChange }: Props)
         </div>
       </div>
       {chartData.length === 0 ? (
-        <p className="text-muted text-sm py-8 text-center">No trend data. Click &quot;Run AI Analysis&quot; to generate insights.</p>
+        <p className="text-muted text-sm py-8 text-center">No trend data available.</p>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={chartData}>

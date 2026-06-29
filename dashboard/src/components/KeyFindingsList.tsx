@@ -21,7 +21,7 @@ export default function KeyFindingsList({ title, findings, variant = 'findings' 
         <Badge label={`${uniqueFindings.length} items`} variant={variant === 'needs' ? 'warning' : 'info'} />
       </div>
       {uniqueFindings.length === 0 ? (
-        <p className="text-muted text-sm">No findings yet. Run AI analysis to discover insights.</p>
+        <p className="text-muted text-sm">No findings yet.</p>
       ) : (
         <ul className="space-y-2">
           {uniqueFindings.map((f, i) => (
