@@ -347,26 +347,24 @@ export default function App() {
                     {analyzing ? 'Running AI Analysis...' : 'Run AI Analysis'}
                   </Button>
                 </div>
-                {reports.length === 0 ? (
-                  <div className="glass-card p-8 text-center">
-                    <p className="text-muted mb-4">No reports generated yet</p>
-                    <Button onClick={handleExportReport}>Generate First Report</Button>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {reports.map((r) => (
-                      <div key={r.id} className="glass-card p-4 flex items-center justify-between">
-                        <div>
-                          <p className="text-white font-medium">Report #{r.id}</p>
-                          <p className="text-muted text-sm">
-                            {r.report_type} · {r.template_type} · {new Date(r.created_at).toLocaleString()}
-                          </p>
-                        </div>
-                        <Button onClick={() => handleDownloadReport(r.id)}>Download</Button>
+                <div className="grid gap-4">
+                  {reports.map((r) => (
+                    <div key={r.id} className="glass-card p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Report #{r.id}</p>
+                        <p className="text-muted text-sm">
+                          {r.report_type} · {r.template_type} · {new Date(r.created_at).toLocaleString()}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <Button onClick={() => handleDownloadReport(r.id)}>Download</Button>
+                    </div>
+                  ))}
+                  {reports.length === 0 && (
+                    <div className="glass-card p-8 text-center">
+                      <p className="text-muted">No reports generated yet</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
