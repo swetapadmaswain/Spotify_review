@@ -8,8 +8,10 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to Python path
+# Add project root and backend directory to Python path
 project_root = Path(__file__).parent
+backend_dir = project_root / "backend"
+sys.path.insert(0, str(backend_dir))
 sys.path.insert(0, str(project_root))
 
 # Set environment variables from Vercel
