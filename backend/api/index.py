@@ -1,8 +1,35 @@
 import os
+from collections import Counter
 from datetime import datetime
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client
+
+POSITIVE_WORDS = ['good', 'great', 'excellent', 'love', 'amazing', 'best', 'awesome', 'fantastic', 'wonderful', 'perfect']
+NEGATIVE_WORDS = ['bad', 'terrible', 'hate', 'worst', 'awful', 'poor', 'disappointing', 'frustrating', 'annoying', 'broken']
+
+TOPIC_KEYWORDS = {
+    'recommendation': ['recommend', 'algorithm', 'discover', 'radio', 'playlist'],
+    'ui_ux': ['interface', 'design', 'layout', 'navigation', 'button'],
+    'performance': ['slow', 'crash', 'lag', 'freeze', 'loading'],
+    'content': ['song', 'artist', 'album', 'music', 'audio'],
+    'features': ['feature', 'function', 'option', 'setting', 'tool'],
+}
+
+TOPIC_LABELS = {
+    'recommendation': 'Music Recommendations',
+    'ui_ux': 'User Interface & Experience',
+    'performance': 'App Performance & Stability',
+    'content': 'Music Content & Catalog',
+    'features': 'Features & Functionality',
+    'general': 'General Feedback',
+}
+
+CATEGORY_MAP = {
+    'recommendation': 'product', 'ui_ux': 'design', 'performance': 'engineering',
+    'content': 'content', 'features': 'product', 'general': 'product',
+}
 
 app = FastAPI(title="Spotify Insights API", version="2.0.0")
 
@@ -194,5 +221,204 @@ async def get_top_topics(limit: int = 10):
         db = get_supabase()
         result = db.table("pattern_insights").select("pattern_type,frequency").order("frequency", desc=True).limit(limit).execute()
         return {"success": True, "data": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _analyze_sentiment(text):
+    t = (text or "").lower()
+    pos = sum(1 for w in POSITIVE_WORDS if w in t)
+    neg = sum(1 for w in NEGATIVE_WORDS if w in t)
+    if pos > neg:
+        return 'positive', min(0.9, 0.5 + pos * 0.1)
+    if neg > pos:
+        return 'negative', min(0.9, 0.5 + neg * 0.1)
+    return 'neutral', 0.5
+
+
+def _extract_topic(text):
+    t = (text or "").lower()
+    scores = {topic: sum(1 for k in kws if k in t) for topic, kws in TOPIC_KEYWORDS.items()}
+    scores = {k: v for k, v in scores.items() if v > 0}
+    if scores:
+        primary = max(scores.items(), key=lambda x: x[1])[0]
+        return primary, list(scores.keys()), scores
+    return 'general', [], {}
+
+
+def _clear(db, table):
+    try:
+        db.table(table).delete().neq('id', 0).execute()
+    except Exception:
+        pass
+
+
+def _generate_insight_tables(db):
+    """Regenerate the dedicated insight tables from analyzed data."""
+    for tbl in ['roadmap_items', 'recommendations', 'unmet_needs',
+                'root_cause_analysis', 'user_segments', 'pattern_insights']:
+        _clear(db, tbl)
+
+    sentiments = [r['sentiment'] for r in _fetch_all(db, 'sentiment_analysis', 'sentiment')]
+    topics = [r['primary_topic'] for r in _fetch_all(db, 'topic_analysis', 'primary_topic')]
+    topic_counts = Counter(topics)
+    sentiment_counts = Counter(sentiments)
+    total = len(sentiments) or len(topics) or 1
+    negative_total = sentiment_counts.get('negative', 0)
+
+    for topic, count in topic_counts.most_common():
+        label = TOPIC_LABELS.get(topic, topic.title())
+        db.table('pattern_insights').insert({
+            'pattern_type': 'thematic',
+            'pattern_description': f"{label} mentioned in {count} reviews ({round(count / total * 100)}% of feedback)",
+            'frequency': count,
+            'confidence': round(min(0.95, 0.5 + count / total), 2),
+            'time_period': 'all_time',
+        }).execute()
+
+    for topic, count in topic_counts.most_common(4):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        db.table('user_segments').insert({
+            'segment_name': f"{label} Users",
+            'segment_criteria': {'primary_topic': topic},
+            'user_count': count,
+            'primary_challenges': [label],
+            'avg_sentiment': sentiment_counts.most_common(1)[0][0] if sentiment_counts else 'neutral',
+        }).execute()
+
+    for i, (topic, count) in enumerate(topic_counts.most_common(5)):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        db.table('unmet_needs').insert({
+            'need_description': f"Improve {label.lower()} based on recurring user feedback",
+            'need_category': CATEGORY_MAP.get(topic, 'product'),
+            'request_count': count,
+            'priority_score': round(min(1.0, count / total + (0.2 if i == 0 else 0)), 2),
+            'strategic_impact': 'high' if i == 0 else ('medium' if i < 3 else 'low'),
+        }).execute()
+
+    if topic_counts:
+        top_topic, top_count = topic_counts.most_common(1)[0]
+        label = TOPIC_LABELS.get(top_topic, top_topic.title())
+        db.table('root_cause_analysis').insert({
+            'issue_topic': label,
+            'root_causes': {'analysis': f"{label} is the most discussed area with {top_count} mentions. "
+                                        f"Negative sentiment appears in {negative_total} reviews overall."},
+            'intermediate_factors': {'factors': f"Recurring mentions of {label.lower()} suggest unmet expectations."},
+            'surface_symptoms': {'symptoms': f"{top_count} reviews reference {label.lower()}."},
+            'confidence': 0.75,
+        }).execute()
+
+    quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    for i, (topic, count) in enumerate(topic_counts.most_common(4)):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        priority = 'high' if i == 0 else ('medium' if i < 3 else 'low')
+        rec_id = None
+        rec = db.table('recommendations').insert({
+            'title': f"Enhance {label}",
+            'description': f"Prioritize improvements to {label.lower()} — referenced in {count} reviews.",
+            'category': CATEGORY_MAP.get(topic, 'product'),
+            'priority': priority,
+            'complexity': 'medium',
+            'expected_impact': 'high' if i == 0 else 'medium',
+            'success_metrics': [f"Reduction in negative {label.lower()} feedback"],
+            'dependencies': [],
+        }).execute()
+        if rec.data:
+            rec_id = rec.data[0]['id']
+        db.table('roadmap_items').insert({
+            'title': f"Enhance {label}",
+            'description': f"Roadmap item addressing {label.lower()} feedback.",
+            'priority': priority,
+            'estimated_effort': 'medium',
+            'quarter': quarters[i % 4],
+            'success_metrics': [f"Improved {label.lower()} satisfaction"],
+            'dependencies': [],
+            'recommendation_id': rec_id,
+        }).execute()
+
+    return {
+        'patterns': len(topic_counts),
+        'segments': min(4, len(topic_counts)),
+        'unmet_needs': min(5, len(topic_counts)),
+        'recommendations': min(4, len(topic_counts)),
+    }
+
+
+@app.post("/api/insights/generate")
+async def generate_insights(payload: Optional[dict] = None):
+    try:
+        db = get_supabase()
+        # Analyze any not-yet-analyzed reviews (bounded to avoid timeouts)
+        analyzed_ids = {r['review_id'] for r in _fetch_all(db, 'sentiment_analysis', 'review_id')}
+        reviews = _fetch_all(db, 'raw_reviews', 'id,review_text')
+        pending = [r for r in reviews if r['id'] not in analyzed_ids][:800]
+        analyzed_count = 0
+        for review in pending:
+            label, score = _analyze_sentiment(review.get('review_text'))
+            db.table('sentiment_analysis').insert({
+                'review_id': review['id'],
+                'sentiment': label,
+                'confidence': score,
+                'emotion': label,
+                'intensity': 'medium' if score > 0.6 else 'low',
+            }).execute()
+            primary, secondary, scores = _extract_topic(review.get('review_text'))
+            db.table('topic_analysis').insert({
+                'review_id': review['id'],
+                'primary_topic': primary,
+                'secondary_topics': secondary,
+                'relevance_scores': scores,
+            }).execute()
+            analyzed_count += 1
+
+        summary = _generate_insight_tables(db)
+        return {
+            "success": True,
+            "data": {
+                "analyzed_reviews": analyzed_count,
+                "remaining": max(0, len(reviews) - len(analyzed_ids) - analyzed_count),
+                **summary,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reports/generate")
+async def generate_report(payload: Optional[dict] = None):
+    try:
+        db = get_supabase()
+        patterns = _fetch_all(db, 'pattern_insights', 'pattern_description,frequency')
+        segments = _fetch_all(db, 'user_segments', 'segment_name,user_count')
+        unmet = _fetch_all(db, 'unmet_needs', 'need_description,priority_score')
+        recs = _fetch_all(db, 'recommendations', 'title,priority')
+        sentiments = Counter(r['sentiment'] for r in _fetch_all(db, 'sentiment_analysis', 'sentiment'))
+
+        content = {
+            "generated_at": datetime.now().isoformat(),
+            "total_reviews": sum(sentiments.values()),
+            "sentiment_breakdown": dict(sentiments),
+            "pattern_count": len(patterns),
+            "segment_count": len(segments),
+            "top_patterns": [p.get('pattern_description') for p in patterns[:5]],
+            "top_unmet_needs": [u.get('need_description') for u in
+                                sorted(unmet, key=lambda x: x.get('priority_score', 0), reverse=True)[:5]],
+            "recommendations": [r.get('title') for r in recs[:5]],
+        }
+
+        file_path = "report (stored in database)"
+        try:
+            result = db.table('generated_reports').insert({
+                'report_type': 'comprehensive',
+                'template_type': 'executive',
+                'content': content,
+            }).execute()
+            if result.data:
+                file_path = f"generated_reports/#{result.data[0]['id']}"
+        except Exception as e:
+            # Table may not exist; still return the report content
+            file_path = f"report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+        return {"success": True, "data": {"file_path": file_path, "status": "completed", "report": content}}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
