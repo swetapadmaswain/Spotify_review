@@ -4,12 +4,8 @@
   "installCommand": "pip install -r requirements.txt",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/vercel.py"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/vercel.py"
+      "destination": "/backend/app.py"
     }
   ]
 }
