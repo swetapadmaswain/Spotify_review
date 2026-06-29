@@ -341,12 +341,7 @@ export default function App() {
 
             {tab === 'reports' && (
               <div className="space-y-6 animate-fade-in">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-white">Reports</h2>
-                  <Button onClick={handleRunAnalysis} disabled={analyzing}>
-                    {analyzing ? 'Running AI Analysis...' : 'Run AI Analysis'}
-                  </Button>
-                </div>
+                <h2 className="text-2xl font-bold text-white">Reports</h2>
                 <div className="grid gap-4">
                   {reports.map((r) => (
                     <div key={r.id} className="glass-card p-4 flex items-center justify-between">
