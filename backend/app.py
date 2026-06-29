@@ -14,10 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 # Import the main application
-from app.api.server import app
+from app.api.server import app as fastapi_app
 
 # Ensure CORS is properly configured
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -25,4 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-handler = app
+# Vercel serverless function handler
+def handler(event, context):
+    """
+    Vercel serverless function handler that wraps FastAPI app
+    """
+    from mangum import Mangum
+    asgi_handler = Mangum(fastapi_app)
+    return asgi_handler(event, context)
