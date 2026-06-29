@@ -129,7 +129,8 @@ async def get_sentiment_distribution():
         for row in (result.data or []):
             label = row.get("sentiment", "unknown")
             counts[label] = counts.get(label, 0) + 1
-        return {"success": True, "data": counts}
+        data = [{"sentiment": k, "count": v} for k, v in counts.items()]
+        return {"success": True, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
