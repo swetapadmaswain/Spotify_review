@@ -9,8 +9,8 @@ repo_root = os.path.dirname(script_dir)
 backend_dir = os.path.join(repo_root, 'backend')
 sys.path.insert(0, backend_dir)
 
-supabase_url = os.getenv('SUPABASE_URL')
-supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+supabase_url = (os.getenv('SUPABASE_URL') or '').strip()
+supabase_key = (os.getenv('SUPABASE_SERVICE_ROLE_KEY') or '').strip()
 
 if not supabase_url or not supabase_key:
     print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
