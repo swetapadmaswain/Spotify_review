@@ -3,8 +3,11 @@ import sys
 from datetime import datetime
 from supabase import create_client
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add backend directory to path for imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(script_dir)
+backend_dir = os.path.join(repo_root, 'backend')
+sys.path.insert(0, backend_dir)
 
 supabase_url = os.getenv('SUPABASE_URL')
 supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
