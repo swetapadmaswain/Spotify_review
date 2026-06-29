@@ -19,8 +19,8 @@ os.environ.setdefault('API_HOST', '0.0.0.0')
 os.environ.setdefault('API_PORT', '8000')
 
 try:
-    # Import your FastAPI app
-    from app.api.server import app as fastapi_app
+    # Import your FastAPI app from backend directory
+    from backend.app.api.server import app as fastapi_app
     handler = fastapi_app
 except Exception as e:
     # Fallback handler for debugging
