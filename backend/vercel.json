@@ -1,22 +1,15 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "pip install -r requirements.txt",
+  "outputDirectory": "dist",
+  "installCommand": "pip install -r requirements.txt",
+  "rewrites": [
     {
-      "src": "app.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb",
-        "runtime": "python3.9"
-      }
-    }
-  ],
-  "routes": [
+      "source": "/api/(.*)",
+      "destination": "/vercel.py"
+    },
     {
-      "src": "/(.*)",
-      "dest": "app.py"
+      "source": "/(.*)",
+      "destination": "/vercel.py"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "."
-  }
+  ]
 }
