@@ -353,7 +353,9 @@ export default function App() {
               <div className="space-y-6 animate-fade-in">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Reports</h2>
-                  <Button onClick={loadReports}>Refresh</Button>
+                  <Button onClick={handleRunAnalysis} disabled={analyzing}>
+                    {analyzing ? 'Running AI Analysis...' : 'Run AI Analysis'}
+                  </Button>
                 </div>
                 {reports.length === 0 ? (
                   <div className="glass-card p-8 text-center">
