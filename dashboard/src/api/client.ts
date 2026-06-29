@@ -105,9 +105,21 @@ export interface SentimentDistribution {
   count: number;
 }
 
+export interface ReportContent {
+  generated_at: string;
+  total_reviews: number;
+  sentiment_breakdown: Record<string, number>;
+  pattern_count: number;
+  segment_count: number;
+  top_patterns: string[];
+  top_unmet_needs: string[];
+  recommendations: string[];
+}
+
 export interface ReportResult {
   file_path: string;
   status: string;
+  report?: ReportContent;
 }
 
 export const api = {

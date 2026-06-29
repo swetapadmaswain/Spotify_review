@@ -113,10 +113,49 @@ export default function App() {
 
   const handleExportReport = async () => {
     try {
-      showToast('Generating report... This may take a moment for large datasets');
+      showToast('Generating report...');
       const result = await api.generateReport();
-      const filePath = result?.file_path || 'reports/';
-      showToast(`Report saved: ${filePath}`);
+      const report = result?.report;
+      if (!report) {
+        showToast('Report generated but no content returned');
+        return;
+      }
+
+      const lines: string[] = [
+        'SPOTIFY REVIEW DISCOVERY — INSIGHTS REPORT',
+        '='.repeat(50),
+        `Generated: ${new Date(report.generated_at).toLocaleString()}`,
+        `Total Reviews Analyzed: ${report.total_reviews}`,
+        '',
+        'SENTIMENT BREAKDOWN',
+        '-'.repeat(50),
+        ...Object.entries(report.sentiment_breakdown).map(([k, v]) => `  ${k}: ${v}`),
+        '',
+        `PATTERNS IDENTIFIED: ${report.pattern_count}`,
+        '-'.repeat(50),
+        ...report.top_patterns.map((p, i) => `  ${i + 1}. ${p}`),
+        '',
+        `USER SEGMENTS: ${report.segment_count}`,
+        '',
+        'TOP UNMET NEEDS',
+        '-'.repeat(50),
+        ...report.top_unmet_needs.map((n, i) => `  ${i + 1}. ${n}`),
+        '',
+        'RECOMMENDATIONS',
+        '-'.repeat(50),
+        ...report.recommendations.map((r, i) => `  ${i + 1}. ${r}`),
+      ];
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spotify-insights-report-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Report downloaded');
     } catch {
       showToast('Report generation failed');
     }
