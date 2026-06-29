@@ -255,9 +255,6 @@ export default function App() {
             <Button variant="secondary" loading={refreshing} onClick={() => loadData(true)}>
               ↻ Refresh Data
             </Button>
-            <Button variant="primary" loading={analyzing} onClick={handleRunAnalysis}>
-              ⚡ Run AI Analysis
-            </Button>
             <Button variant="secondary" onClick={handleExportReport}>
               📄 Export Report
             </Button>
