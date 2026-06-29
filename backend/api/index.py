@@ -135,12 +135,37 @@ async def get_sentiment_distribution():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _fetch_all(db, table, columns):
+    """Fetch all rows from a table with pagination (PostgREST caps at 1000/page)."""
+    rows = []
+    page = 0
+    page_size = 1000
+    while True:
+        start = page * page_size
+        end = start + page_size - 1
+        result = db.table(table).select(columns).range(start, end).execute()
+        batch = result.data or []
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        page += 1
+    return rows
+
+
 @app.get("/api/analytics/sentiment-trends")
 async def get_sentiment_trends(days: int = 30):
     try:
         db = get_supabase()
-        result = db.table("sentiment_analysis").select("*").limit(100).execute()
-        return {"success": True, "data": result.data}
+        rows = _fetch_all(db, "sentiment_analysis", "sentiment,analyzed_at")
+        counts = {}
+        for row in rows:
+            date = (row.get("analyzed_at") or "")[:10]
+            sentiment = row.get("sentiment", "unknown")
+            key = (date, sentiment)
+            counts[key] = counts.get(key, 0) + 1
+        data = [{"date": d, "sentiment": s, "count": c} for (d, s), c in counts.items()]
+        data.sort(key=lambda x: x["date"])
+        return {"success": True, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -149,8 +174,16 @@ async def get_sentiment_trends(days: int = 30):
 async def get_topic_evolution(days: int = 30):
     try:
         db = get_supabase()
-        result = db.table("pattern_insights").select("pattern_type,discovered_at,frequency").order("discovered_at", desc=True).limit(100).execute()
-        return {"success": True, "data": result.data}
+        rows = _fetch_all(db, "topic_analysis", "primary_topic,analyzed_at")
+        counts = {}
+        for row in rows:
+            date = (row.get("analyzed_at") or "")[:10]
+            topic = row.get("primary_topic", "general")
+            key = (date, topic)
+            counts[key] = counts.get(key, 0) + 1
+        data = [{"date": d, "primary_topic": t, "count": c} for (d, t), c in counts.items()]
+        data.sort(key=lambda x: x["date"])
+        return {"success": True, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
