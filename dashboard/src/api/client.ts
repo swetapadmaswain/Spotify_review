@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const API_BASE = 'https://spotify-insights-backend-3zs1qksbt-swetapadmaswains-projects.vercel.app';
+const API_BASE = 'https://spotify-insights-backend.vercel.app';
 
 async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
