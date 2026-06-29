@@ -19,7 +19,7 @@ import UnmetNeedsPanel from './components/UnmetNeedsPanel';
 import RecommendationsPanel from './components/RecommendationsPanel';
 import Button from './components/ui/Button';
 
-type Tab = 'executive' | 'patterns' | 'segments' | 'insights' | 'recommendations' | 'reports';
+type Tab = 'executive' | 'patterns' | 'segments' | 'insights' | 'recommendations';
 
 const TABS: { id: Tab; label: string; icon: string; desc: string }[] = [
   { id: 'executive', label: 'Executive', icon: '📊', desc: 'Health score & overview' },
@@ -27,7 +27,6 @@ const TABS: { id: Tab; label: string; icon: string; desc: string }[] = [
   { id: 'segments', label: 'Segments', icon: '👥', desc: 'User clusters' },
   { id: 'insights', label: 'Deep Insights', icon: '🧠', desc: 'Root causes & gaps' },
   { id: 'recommendations', label: 'Actions', icon: '🎯', desc: 'Roadmap & strategy' },
-  { id: 'reports', label: 'Reports', icon: '📄', desc: 'View & download reports' },
 ];
 
 export default function App() {
@@ -49,8 +48,6 @@ export default function App() {
   const [unmetNeeds, setUnmetNeeds] = useState<UnmetNeed[]>([]);
   const [rootCauses, setRootCauses] = useState<RootCause[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
-  const [analysisTimeout, setAnalysisTimeout] = useState(false);
   const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
 
   const showToast = (msg: string) => {
@@ -100,12 +97,6 @@ export default function App() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  useEffect(() => {
-    if (tab === 'reports') {
-      loadReports();
-    }
-  }, [tab]);
-
   const handleRunAnalysis = async () => {
     setAnalyzing(true);
     try {
@@ -115,15 +106,6 @@ export default function App() {
       showToast('Failed to refresh data');
     } finally {
       setAnalyzing(false);
-    }
-  };
-
-  const loadReports = async () => {
-    try {
-      const data = await api.getReports();
-      setReports(data);
-    } catch (e: any) {
-      console.error('Failed to load reports:', e);
     }
   };
 
@@ -172,59 +154,8 @@ export default function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showToast('Report downloaded');
-      await loadReports();
     } catch {
       showToast('Report generation failed');
-    }
-  };
-
-  const handleDownloadReport = async (id: number) => {
-    try {
-      showToast('Loading report...');
-      const report = await api.getReport(id);
-      const content = report?.content;
-      if (!content) {
-        showToast('Report content not found');
-        return;
-      }
-
-      const lines: string[] = [
-        'SPOTIFY REVIEW DISCOVERY — INSIGHTS REPORT',
-        '='.repeat(50),
-        `Generated: ${new Date(content.generated_at).toLocaleString()}`,
-        `Total Reviews Analyzed: ${content.total_reviews}`,
-        '',
-        'SENTIMENT BREAKDOWN',
-        '-'.repeat(50),
-        ...Object.entries(content.sentiment_breakdown).map(([k, v]) => `  ${k}: ${v}`),
-        '',
-        `PATTERNS IDENTIFIED: ${content.pattern_count}`,
-        '-'.repeat(50),
-        ...content.top_patterns.map((p: string, i: number) => `  ${i + 1}. ${p}`),
-        '',
-        `USER SEGMENTS: ${content.segment_count}`,
-        '',
-        'TOP UNMET NEEDS',
-        '-'.repeat(50),
-        ...content.top_unmet_needs.map((n: string, i: number) => `  ${i + 1}. ${n}`),
-        '',
-        'RECOMMENDATIONS',
-        '-'.repeat(50),
-        ...content.recommendations.map((r: string, i: number) => `  ${i + 1}. ${r}`),
-      ];
-
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `spotify-insights-report-${id}-${new Date().toISOString().slice(0, 10)}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('Report downloaded');
-    } catch {
-      showToast('Failed to download report');
     }
   };
 
@@ -334,30 +265,6 @@ export default function App() {
 
             {tab === 'recommendations' && (
               <RecommendationsPanel recommendations={recommendations} roadmap={roadmap} />
-            )}
-
-            {tab === 'reports' && (
-              <div className="space-y-6 animate-fade-in">
-                <h2 className="text-2xl font-bold text-white">Reports</h2>
-                <div className="grid gap-4">
-                  {reports.map((r) => (
-                    <div key={r.id} className="glass-card p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-medium">Report #{r.id}</p>
-                        <p className="text-muted text-sm">
-                          {r.report_type} · {r.template_type} · {new Date(r.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                      <Button onClick={() => handleDownloadReport(r.id)}>Download</Button>
-                    </div>
-                  ))}
-                  {reports.length === 0 && (
-                    <div className="glass-card p-8 text-center">
-                      <p className="text-muted">No reports generated yet</p>
-                    </div>
-                  )}
-                </div>
-              </div>
             )}
           </>
         )}
