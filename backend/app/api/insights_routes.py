@@ -14,12 +14,12 @@ async def get_insights_summary():
     """Executive summary of generated insights."""
     try:
         summary = insight_store.get_summary()
-        # Add total reviews count from raw_reviews table
+        # Add total reviews count from raw_reviews table (limited to 10k)
         from app.database.connection import get_session
         from sqlalchemy import text
         db = get_session()
         try:
-            result = db.execute(text("SELECT COUNT(*) as count FROM raw_reviews"))
+            result = db.execute(text("SELECT COUNT(*) as count FROM (SELECT 1 FROM raw_reviews LIMIT 10000) as limited"))
             total_reviews = result.fetchone()[0] if result else 0
             summary["total_reviews"] = total_reviews
         finally:

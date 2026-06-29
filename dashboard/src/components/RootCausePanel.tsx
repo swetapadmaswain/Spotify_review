@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { RootCause } from '../api/client';
-import { summarizeRootCause } from '../utils/insights';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
 
@@ -14,9 +13,14 @@ export default function RootCausePanel({ data }: Props) {
 
   return (
     <Card>
-      <h3 className="text-lg font-semibold mb-4">Root Cause Analysis</h3>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold mb-2">🧠 Root Cause Analysis</h3>
+        <p className="text-sm text-muted">
+          Deep dive into the underlying causes of user issues. Understanding root causes helps fix problems at their source.
+        </p>
+      </div>
       {data.length === 0 ? (
-        <p className="text-muted text-sm">No root cause analyses yet.</p>
+        <p className="text-muted text-sm">No root cause analyses yet. Run AI analysis to generate insights.</p>
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
           <div className="space-y-2">
@@ -37,14 +41,39 @@ export default function RootCausePanel({ data }: Props) {
           </div>
           <div className="md:col-span-2 p-4 rounded-xl bg-black/30 border border-white/5">
             {active && (
-              <>
-                <h4 className="font-semibold text-spotify mb-2 capitalize">
-                  {active.issue_topic?.replace(/_/g, ' ')}
-                </h4>
-                <p className="text-sm text-white/80 leading-relaxed whitespace-pre-line">
-                  {summarizeRootCause(active)}
-                </p>
-              </>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold text-spotify mb-2 capitalize">
+                    {active.issue_topic?.replace(/_/g, ' ')}
+                  </h4>
+                  <Badge label={`${Math.round((active.confidence || 0) * 100)}% confidence`} variant="info" />
+                </div>
+                
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-xs text-muted mb-1">Root Causes</p>
+                  <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">
+                    {String(active.root_causes?.analysis || 'No analysis available')}
+                  </p>
+                </div>
+
+                {active.root_causes?.intermediate_factors && typeof active.root_causes.intermediate_factors === 'string' && (
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <p className="text-xs text-muted mb-1">Contributing Factors</p>
+                    <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">
+                      {active.root_causes.intermediate_factors}
+                    </p>
+                  </div>
+                )}
+
+                {active.root_causes?.suggested_fixes && typeof active.root_causes.suggested_fixes === 'string' && (
+                  <div className="p-3 rounded-lg bg-spotify/10 border border-spotify/20">
+                    <p className="text-xs text-spotify mb-1">💡 Suggested Fixes</p>
+                    <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">
+                      {active.root_causes.suggested_fixes}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

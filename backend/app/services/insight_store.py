@@ -84,17 +84,21 @@ class InsightStore:
                 .all()
             )
 
+            # Remove duplicates while preserving order
+            key_findings = list(dict.fromkeys(
+                p.pattern_description for p in top_patterns if p.pattern_description
+            ))
+            top_unmet_needs = list(dict.fromkeys(
+                n.need_description for n in top_needs if n.need_description
+            ))
+
             return {
                 "pattern_count": pattern_count,
                 "segment_count": segment_count,
                 "root_cause_count": root_cause_count,
                 "unmet_need_count": unmet_need_count,
-                "key_findings": [
-                    p.pattern_description for p in top_patterns if p.pattern_description
-                ],
-                "top_unmet_needs": [
-                    n.need_description for n in top_needs if n.need_description
-                ],
+                "key_findings": key_findings,
+                "top_unmet_needs": top_unmet_needs,
             }
         finally:
             db.close()

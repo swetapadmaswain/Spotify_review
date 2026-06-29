@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Pattern } from '../api/client';
-import { filterPatterns } from '../utils/insights';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
@@ -10,126 +8,138 @@ interface Props {
   data: Pattern[];
 }
 
-const COLORS: Record<string, string> = {
-  temporal: '#1DB954',
-  thematic: '#509bf5',
-  cross_platform: '#f59b23',
+const PATTERN_EXPLANATIONS: Record<string, string> = {
+  temporal: 'Time-based patterns showing how user behavior changes over days, weeks, or months',
+  thematic: 'Topic-based patterns revealing common themes in user feedback',
+  cross_platform: 'Patterns that appear across different platforms (App Store, Play Store, etc.)',
 };
-
-const FILTERS = [
-  { id: null, label: 'All' },
-  { id: 'temporal', label: 'Temporal' },
-  { id: 'thematic', label: 'Thematic' },
-  { id: 'cross_platform', label: 'Cross-Platform' },
-];
 
 export default function PatternDashboard({ data }: Props) {
   const [filter, setFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Pattern | null>(null);
 
-  const filtered = filterPatterns(data, filter);
-  const chartData = filtered.slice(0, 10).map((p) => ({
-    name: (p.pattern_description || p.pattern_type || '').slice(0, 32),
-    frequency: p.frequency,
-    type: p.pattern_type,
-    full: p,
-  }));
+  const filtered = filter ? data.filter((p) => p.pattern_type === filter) : data;
+  const topPatterns = filtered.sort((a, b) => b.frequency - a.frequency).slice(0, 8);
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Explanation Header */}
+      <Card className="bg-gradient-to-r from-spotify/10 to-transparent border-spotify/20">
+        <h3 className="text-lg font-semibold mb-2">🔍 What are Patterns?</h3>
+        <p className="text-sm text-muted mb-3">
+          Patterns are recurring behaviors or themes we discovered in user reviews. They help you understand what users consistently mention or do.
+        </p>
+        <div className="grid md:grid-cols-3 gap-3 text-xs">
+          <div className="p-2 rounded bg-white/5">
+            <strong className="text-spotify">Temporal:</strong> Time-based trends
+          </div>
+          <div className="p-2 rounded bg-white/5">
+            <strong className="text-blue-400">Thematic:</strong> Common topics
+          </div>
+          <div className="p-2 rounded bg-white/5">
+            <strong className="text-orange-400">Cross-Platform:</strong> Multi-platform patterns
+          </div>
+        </div>
+      </Card>
+
+      {/* Filter Buttons */}
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <Button
-            key={String(f.id)}
-            variant={filter === f.id ? 'primary' : 'ghost'}
-            onClick={() => { setFilter(f.id); setSelected(null); }}
-          >
-            {f.label}
-            {f.id && (
-              <span className="ml-1 opacity-70">
-                ({data.filter((p) => p.pattern_type === f.id).length})
-              </span>
-            )}
-          </Button>
-        ))}
+        <Button
+          variant={filter === null ? 'primary' : 'ghost'}
+          onClick={() => { setFilter(null); setSelected(null); }}
+        >
+          All Patterns ({data.length})
+        </Button>
+        <Button
+          variant={filter === 'temporal' ? 'primary' : 'ghost'}
+          onClick={() => { setFilter('temporal'); setSelected(null); }}
+        >
+          ⏰ Temporal ({data.filter((p) => p.pattern_type === 'temporal').length})
+        </Button>
+        <Button
+          variant={filter === 'thematic' ? 'primary' : 'ghost'}
+          onClick={() => { setFilter('thematic'); setSelected(null); }}
+        >
+          📝 Thematic ({data.filter((p) => p.pattern_type === 'thematic').length})
+        </Button>
+        <Button
+          variant={filter === 'cross_platform' ? 'primary' : 'ghost'}
+          onClick={() => { setFilter('cross_platform'); setSelected(null); }}
+        >
+          🌐 Cross-Platform ({data.filter((p) => p.pattern_type === 'cross_platform').length})
+        </Button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        {['temporal', 'thematic', 'cross_platform'].map((type) => {
-          const count = data.filter((p) => p.pattern_type === type).length;
-          const top = data.filter((p) => p.pattern_type === type).sort((a, b) => b.frequency - a.frequency)[0];
-          return (
-            <Card
-              key={type}
-              onClick={() => setFilter(type)}
-              className={filter === type ? 'border-spotify/40' : ''}
-            >
-              <p className="text-xs text-muted uppercase tracking-wide">{type.replace('_', ' ')}</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: COLORS[type] }}>{count}</p>
-              {top && <p className="text-xs text-muted mt-2 truncate">{top.pattern_description}</p>}
-            </Card>
-          );
-        })}
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <h3 className="text-lg font-semibold mb-4">Pattern Frequency</h3>
-          {chartData.length === 0 ? (
-            <p className="text-muted text-sm">No patterns for this filter.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis type="number" stroke="#666" />
-                <YAxis dataKey="name" type="category" width={130} stroke="#666" tick={{ fontSize: 9 }} />
-                <Tooltip
-                  contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }}
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                />
-                <Bar dataKey="frequency" radius={[0, 6, 6, 0]}>
-                  {chartData.map((entry, i) => (
-                    <Cell
-                      key={i}
-                      fill={COLORS[entry.type] || '#888'}
-                      opacity={selected?.id === entry.full.id ? 1 : 0.75}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelected(entry.full)}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+      {/* Current Filter Explanation */}
+      {filter && (
+        <Card className="bg-white/5">
+          <p className="text-sm text-muted">
+            <strong>Showing:</strong> {PATTERN_EXPLANATIONS[filter] || filter}
+          </p>
         </Card>
+      )}
 
-        <Card>
-          <h3 className="text-lg font-semibold mb-4">Pattern Detail</h3>
-          {selected ? (
-            <div className="space-y-4">
-              <Badge label={selected.pattern_type} variant="info" />
-              <p className="text-white/90">{selected.pattern_description}</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted">Frequency</p>
-                  <p className="text-xl font-bold text-spotify">{selected.frequency}</p>
+      {/* Pattern List */}
+      <div className="grid gap-4">
+        {topPatterns.length === 0 ? (
+          <Card>
+            <p className="text-muted text-center py-8">No patterns found for this filter</p>
+          </Card>
+        ) : (
+          topPatterns.map((pattern, index) => (
+            <Card
+              key={pattern.id}
+              className={`cursor-pointer transition-all hover:border-spotify/40 ${
+                selected?.id === pattern.id ? 'border-spotify bg-spotify/5' : ''
+              }`}
+              onClick={() => setSelected(pattern)}
+            >
+              <div className="flex items-start gap-4">
+                <div className="text-2xl font-bold text-muted/50 w-8">
+                  #{index + 1}
                 </div>
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted">Confidence</p>
-                  <p className="text-xl font-bold">{Math.round((selected.confidence || 0) * 100)}%</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge label={pattern.pattern_type} variant="info" />
+                    <span className="text-xs text-muted">
+                      Seen {pattern.frequency} times · {Math.round((pattern.confidence || 0) * 100)}% confidence
+                    </span>
+                  </div>
+                  <p className="text-white font-medium mb-2">{pattern.pattern_description}</p>
+                  {selected?.id === pattern.id && (
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted">Frequency</p>
+                          <p className="text-xl font-bold text-spotify">{pattern.frequency}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted">Confidence</p>
+                          <p className="text-xl font-bold">{Math.round((pattern.confidence || 0) * 100)}%</p>
+                        </div>
+                      </div>
+                      {pattern.time_period && (
+                        <p className="text-xs text-muted">
+                          <strong>Time Period:</strong> {pattern.time_period}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted">
+                        <strong>What this means:</strong> Users consistently show this behavior, indicating it's a genuine pattern worth addressing.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-              {selected.time_period && (
-                <p className="text-xs text-muted">Period: {selected.time_period}</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-muted text-sm py-12 text-center">
-              Click a bar in the chart to inspect pattern details
-            </p>
-          )}
-        </Card>
+            </Card>
+          ))
+        )}
       </div>
+
+      {filtered.length > 8 && (
+        <p className="text-center text-sm text-muted">
+          Showing top 8 of {filtered.length} patterns. Click on a pattern to see more details.
+        </p>
+      )}
     </div>
   );
 }

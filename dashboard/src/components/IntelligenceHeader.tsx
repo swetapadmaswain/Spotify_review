@@ -32,6 +32,9 @@ export default function IntelligenceHeader({
               <p className={`text-sm ${color}`}>{label}</p>
             </div>
           </div>
+          <p className="text-xs text-muted mt-2">
+            Score 0-100 based on sentiment, patterns, and insights detected
+          </p>
         </div>
 
         <div className="flex-1 border-l border-white/10 pl-0 lg:pl-6">

@@ -3,9 +3,17 @@ import { supabase } from '../lib/supabase';
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    cache: 'no-cache',
+    headers: {
+      ...options?.headers,
+      'Cache-Control': 'no-cache',
+    },
+  });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
+  console.log(`API Response for ${path}:`, json);
   return json.data ?? json;
 }
 
@@ -84,6 +92,7 @@ export interface RoadmapItem {
   priority: string;
   quarter: string;
   estimated_effort: string;
+  dependencies?: string[];
 }
 
 export interface SentimentDistribution {

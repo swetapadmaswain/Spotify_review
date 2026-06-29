@@ -11,17 +11,20 @@ interface Props {
 export default function KeyFindingsList({ title, findings, variant = 'findings' }: Props) {
   const [expanded, setExpanded] = useState<number | null>(null);
 
+  // Remove duplicates while preserving order
+  const uniqueFindings = Array.from(new Set(findings.map(f => f.trim()))).filter(f => f.length > 0);
+
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <Badge label={`${findings.length} items`} variant={variant === 'needs' ? 'warning' : 'info'} />
+        <Badge label={`${uniqueFindings.length} items`} variant={variant === 'needs' ? 'warning' : 'info'} />
       </div>
-      {findings.length === 0 ? (
+      {uniqueFindings.length === 0 ? (
         <p className="text-muted text-sm">No findings yet. Run AI analysis to discover insights.</p>
       ) : (
         <ul className="space-y-2">
-          {findings.map((f, i) => (
+          {uniqueFindings.map((f, i) => (
             <li key={i}>
               <button
                 onClick={() => setExpanded(expanded === i ? null : i)}

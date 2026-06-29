@@ -113,6 +113,7 @@ export default function App() {
 
   const handleExportReport = async () => {
     try {
+      showToast('Generating report... This may take a moment for large datasets');
       const result = await api.generateReport();
       const filePath = result?.file_path || 'reports/';
       showToast(`Report saved: ${filePath}`);

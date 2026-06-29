@@ -11,9 +11,14 @@ export default function UnmetNeedsPanel({ data }: Props) {
 
   return (
     <Card>
-      <h3 className="text-lg font-semibold mb-4">Prioritized Unmet Needs</h3>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold mb-2">💡 Unmet Needs</h3>
+        <p className="text-sm text-muted">
+          Features or improvements users are asking for but don't have yet. These are opportunities to delight users and stay ahead of competitors.
+        </p>
+      </div>
       {sorted.length === 0 ? (
-        <p className="text-muted text-sm">No unmet needs detected.</p>
+        <p className="text-muted text-sm">No unmet needs detected. Run AI analysis to identify user requests.</p>
       ) : (
         <div className="space-y-3">
           {sorted.map((need, i) => (
@@ -45,6 +50,11 @@ export default function UnmetNeedsPanel({ data }: Props) {
                     style={{ width: `${need.priority_score * 100}%` }}
                   />
                 </div>
+                <p className="text-xs text-muted mt-2">
+                  {need.priority_score >= 0.8 ? '🔥 High priority - many users want this' : 
+                   need.priority_score >= 0.6 ? '⚡ Medium priority - worth considering' : 
+                   '📌 Lower priority - nice to have'}
+                </p>
               </div>
             </div>
           ))}

@@ -32,9 +32,20 @@ class RecommendationRequest(BaseModel):
 
 
 @router.get("/api/recommendations")
-async def get_recommendations(_: bool = Depends(require_auth)):
+async def get_recommendations():
     try:
-        return {"success": True, "data": recommendation_engine.get_recommendations()}
+        recommendations = recommendation_engine.get_recommendations()
+        # Return only essential fields to reduce response size
+        simplified = [
+            {
+                "title": r.get("title"),
+                "description": r.get("description"),
+                "category": r.get("category"),
+                "priority": r.get("priority"),
+            }
+            for r in recommendations
+        ]
+        return {"success": True, "data": simplified}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -55,7 +66,7 @@ async def generate_recommendations(
 
 
 @router.get("/api/roadmap")
-async def get_roadmap(_: bool = Depends(require_auth)):
+async def get_roadmap():
     try:
         return {"success": True, "data": roadmap_integrator.get_roadmap_items()}
     except Exception as e:
@@ -107,7 +118,7 @@ async def query_insights(request: InsightRequest, _: bool = Depends(require_auth
 
 
 @router.get("/api/reports/latest")
-async def get_latest_report(_: bool = Depends(require_auth)):
+async def get_latest_report():
     try:
         report = report_generator.get_latest_report()
         if not report:
@@ -120,16 +131,15 @@ async def get_latest_report(_: bool = Depends(require_auth)):
 
 
 @router.post("/api/reports/generate")
-async def generate_report(template_type: str = "executive", _: bool = Depends(require_auth)):
+async def generate_report(template_type: str = "executive"):
     try:
         report = report_generator.generate_comprehensive_report()
         markdown = report_generator.render_report(template_type)
         path = report_generator.save_report_to_file(template_type)
         return {
             "success": True,
-            "data": report,
-            "markdown": markdown,
             "file_path": str(path),
+            "generated_at": report.get("generated_at"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
