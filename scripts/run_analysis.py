@@ -115,101 +115,153 @@ def analyze_reviews():
     print(f"Analysis completed. Analyzed {analyzed_count} reviews")
     return analyzed_count
 
+TOPIC_LABELS = {
+    'recommendation': 'Music Recommendations',
+    'ui_ux': 'User Interface & Experience',
+    'performance': 'App Performance & Stability',
+    'content': 'Music Content & Catalog',
+    'features': 'Features & Functionality',
+    'general': 'General Feedback',
+}
+
+CATEGORY_MAP = {
+    'recommendation': 'product',
+    'ui_ux': 'design',
+    'performance': 'engineering',
+    'content': 'content',
+    'features': 'product',
+    'general': 'product',
+}
+
+
+def _clear_table(table):
+    try:
+        supabase.table(table).delete().neq('id', 0).execute()
+    except Exception as e:
+        print(f"Warning: could not clear {table}: {e}")
+
+
 def generate_insights():
-    """Generate insights from analyzed data"""
+    """Generate insights from analyzed data into the dedicated insight tables
+    that the backend API and dashboard read from."""
     print("Generating insights...")
-    
-    # Clear existing insights to avoid duplicates
-    try:
-        supabase.table('insights').delete().neq('id', 0).execute()
-        print("Cleared existing insights")
-    except Exception as e:
-        print(f"Warning: Could not clear existing insights: {e}")
-    
-    # Get sentiment distribution
-    sentiment_response = supabase.table('sentiment_analysis').select('sentiment').execute()
-    sentiments = [row['sentiment'] for row in sentiment_response.data]
-    
-    # Get top topics
-    topic_response = supabase.table('topic_analysis').select('primary_topic').execute()
-    topics = [row['primary_topic'] for row in topic_response.data]
-    
-    # Count topics
     from collections import Counter
+
+    # Clear dedicated tables to avoid duplicates on re-run
+    for tbl in ['roadmap_items', 'recommendations', 'unmet_needs',
+                'root_cause_analysis', 'user_segments', 'pattern_insights']:
+        _clear_table(tbl)
+
+    # Pull analyzed data
+    sentiment_rows = supabase.table('sentiment_analysis').select('sentiment').execute().data or []
+    sentiments = [r['sentiment'] for r in sentiment_rows]
+    topic_rows = supabase.table('topic_analysis').select('primary_topic').execute().data or []
+    topics = [r['primary_topic'] for r in topic_rows]
+
     topic_counts = Counter(topics)
-    
-    # Create pattern insights
+    sentiment_counts = Counter(sentiments)
+    total_reviews = len(sentiments) or len(topics) or 1
+    negative_total = sentiment_counts.get('negative', 0)
+
+    # 1) pattern_insights — one per topic
+    for topic, count in topic_counts.most_common():
+        label = TOPIC_LABELS.get(topic, topic.title())
+        try:
+            supabase.table('pattern_insights').insert({
+                'pattern_type': 'thematic',
+                'pattern_description': f"{label} mentioned in {count} reviews ({round(count / total_reviews * 100)}% of feedback)",
+                'frequency': count,
+                'confidence': round(min(0.95, 0.5 + count / total_reviews), 2),
+                'time_period': 'all_time',
+            }).execute()
+        except Exception as e:
+            print(f"Error inserting pattern_insight ({topic}): {e}")
+    print(f"Created {len(topic_counts)} pattern insights")
+
+    # 2) user_segments — derived from topic focus
+    for topic, count in topic_counts.most_common(4):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        try:
+            supabase.table('user_segments').insert({
+                'segment_name': f"{label} Users",
+                'segment_criteria': {'primary_topic': topic},
+                'user_count': count,
+                'primary_challenges': [label],
+                'avg_sentiment': sentiment_counts.most_common(1)[0][0] if sentiment_counts else 'neutral',
+            }).execute()
+        except Exception as e:
+            print(f"Error inserting user_segment ({topic}): {e}")
+    print("Created user segments")
+
+    # 3) unmet_needs — based on negative sentiment around topics
+    for i, (topic, count) in enumerate(topic_counts.most_common(5)):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        try:
+            supabase.table('unmet_needs').insert({
+                'need_description': f"Improve {label.lower()} based on recurring user feedback",
+                'need_category': CATEGORY_MAP.get(topic, 'product'),
+                'request_count': count,
+                'priority_score': round(min(1.0, count / total_reviews + (0.2 if i == 0 else 0)), 2),
+                'strategic_impact': 'high' if i == 0 else ('medium' if i < 3 else 'low'),
+            }).execute()
+        except Exception as e:
+            print(f"Error inserting unmet_need ({topic}): {e}")
+    print("Created unmet needs")
+
+    # 4) root_cause_analysis — for the most negative/common topic
     if topic_counts:
-        top_topic = topic_counts.most_common(1)[0]
+        top_topic, top_count = topic_counts.most_common(1)[0]
+        label = TOPIC_LABELS.get(top_topic, top_topic.title())
         try:
-            supabase.table('insights').insert({
-                'insight_type': 'pattern',
-                'title': f"Most common topic: {top_topic[0]}",
-                'description': f"Users frequently mention {top_topic[0]} in their feedback ({top_topic[1]} mentions)",
-                'data': {'topic': top_topic[0], 'count': top_topic[1]},
-                'confidence': 0.8
+            supabase.table('root_cause_analysis').insert({
+                'issue_topic': label,
+                'root_causes': {'analysis': f"{label} is the most discussed area with {top_count} mentions. "
+                                            f"Negative sentiment appears in {negative_total} reviews overall."},
+                'intermediate_factors': {'factors': f"Recurring mentions of {label.lower()} suggest unmet expectations."},
+                'surface_symptoms': {'symptoms': f"{top_count} reviews reference {label.lower()}."},
+                'confidence': 0.75,
             }).execute()
-            print(f"Created pattern insight for topic: {top_topic[0]}")
+            print("Created root cause analysis")
         except Exception as e:
-            print(f"Error creating pattern insight: {e}")
-    
-    # Create sentiment insight (always create regardless of threshold)
-    if sentiments:
-        negative_count = sentiments.count('negative')
-        positive_count = sentiments.count('positive')
-        neutral_count = sentiments.count('neutral')
-        
+            print(f"Error inserting root_cause_analysis: {e}")
+
+    # 5) recommendations + roadmap_items — actionable items per top topic
+    quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    for i, (topic, count) in enumerate(topic_counts.most_common(4)):
+        label = TOPIC_LABELS.get(topic, topic.title())
+        priority = 'high' if i == 0 else ('medium' if i < 3 else 'low')
+        rec_id = None
         try:
-            supabase.table('insights').insert({
-                'insight_type': 'root_cause',
-                'title': 'Sentiment distribution',
-                'description': f'Sentiment breakdown: {positive_count} positive, {negative_count} negative, {neutral_count} neutral',
-                'data': {'negative_count': negative_count, 'positive_count': positive_count, 'neutral_count': neutral_count, 'total': len(sentiments)},
-                'confidence': 0.75
+            rec = supabase.table('recommendations').insert({
+                'title': f"Enhance {label}",
+                'description': f"Prioritize improvements to {label.lower()} — referenced in {count} reviews.",
+                'category': CATEGORY_MAP.get(topic, 'product'),
+                'priority': priority,
+                'complexity': 'medium',
+                'expected_impact': 'high' if i == 0 else 'medium',
+                'success_metrics': [f"Reduction in negative {label.lower()} feedback"],
+                'dependencies': [],
             }).execute()
-            print(f"Created sentiment insight: {positive_count} positive, {negative_count} negative, {neutral_count} neutral")
+            if rec.data:
+                rec_id = rec.data[0]['id']
         except Exception as e:
-            print(f"Error creating sentiment insight: {e}")
-    
-    # Create sample segment insight
-    try:
-        supabase.table('insights').insert({
-            'insight_type': 'segment',
-            'title': 'User segment analysis',
-            'description': 'Based on review patterns, users can be segmented by their primary concerns',
-            'data': {'segments': ['recommendation-focused', 'ui-focused', 'performance-focused']},
-            'confidence': 0.7
-        }).execute()
-        print("Created segment insight")
-    except Exception as e:
-        print(f"Error creating segment insight: {e}")
-    
-    # Create sample unmet need insight
-    try:
-        supabase.table('insights').insert({
-            'insight_type': 'unmet_need',
-            'title': 'Feature requests',
-            'description': 'Users are requesting better playlist customization and discovery features',
-            'data': {'needs': ['better recommendations', 'more variety', 'ui improvements']},
-            'confidence': 0.8
-        }).execute()
-        print("Created unmet need insight")
-    except Exception as e:
-        print(f"Error creating unmet need insight: {e}")
-    
-    # Create sample recommendation
-    try:
-        supabase.table('insights').insert({
-            'insight_type': 'recommendation',
-            'title': 'Improve recommendation algorithm',
-            'description': 'Focus on reducing repetition in radio and playlist suggestions',
-            'data': {'priority': 'high', 'category': 'product'},
-            'confidence': 0.85
-        }).execute()
-        print("Created recommendation insight")
-    except Exception as e:
-        print(f"Error creating recommendation insight: {e}")
-    
+            print(f"Error inserting recommendation ({topic}): {e}")
+
+        try:
+            supabase.table('roadmap_items').insert({
+                'title': f"Enhance {label}",
+                'description': f"Roadmap item addressing {label.lower()} feedback.",
+                'priority': priority,
+                'estimated_effort': 'medium',
+                'quarter': quarters[i % 4],
+                'success_metrics': [f"Improved {label.lower()} satisfaction"],
+                'dependencies': [],
+                'recommendation_id': rec_id,
+            }).execute()
+        except Exception as e:
+            print(f"Error inserting roadmap_item ({topic}): {e}")
+    print("Created recommendations and roadmap items")
+
     print("Insights generated")
 
 if __name__ == '__main__':

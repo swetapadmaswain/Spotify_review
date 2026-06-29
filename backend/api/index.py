@@ -43,7 +43,7 @@ async def get_summary():
         db = get_supabase()
         patterns = db.table("pattern_insights").select("*").execute()
         segments = db.table("user_segments").select("*").execute()
-        root_causes = db.table("root_cause_analysis_results").select("*").execute()
+        root_causes = db.table("root_cause_analysis").select("*").execute()
         unmet_needs = db.table("unmet_needs").select("*").execute()
         return {
             "success": True,
@@ -84,7 +84,7 @@ async def get_segments():
 async def get_root_causes():
     try:
         db = get_supabase()
-        result = db.table("root_cause_analysis_results").select("*").order("analyzed_at", desc=True).limit(20).execute()
+        result = db.table("root_cause_analysis").select("*").order("analyzed_at", desc=True).limit(20).execute()
         return {"success": True, "data": result.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -124,10 +124,10 @@ async def get_roadmap():
 async def get_sentiment_distribution():
     try:
         db = get_supabase()
-        result = db.table("sentiment_analysis").select("sentiment_label").execute()
+        result = db.table("sentiment_analysis").select("sentiment").execute()
         counts = {}
         for row in (result.data or []):
-            label = row.get("sentiment_label", "unknown")
+            label = row.get("sentiment", "unknown")
             counts[label] = counts.get(label, 0) + 1
         return {"success": True, "data": counts}
     except Exception as e:
