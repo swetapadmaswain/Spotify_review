@@ -5,8 +5,9 @@ Vercel Entry Point - Production Backend with Supabase Integration
 import sys
 import os
 
-# Add parent directory to path to import app modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add backend directory to path to import app modules
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, backend_dir)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

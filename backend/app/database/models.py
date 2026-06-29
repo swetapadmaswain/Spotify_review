@@ -45,7 +45,7 @@ class RawReview(Base):
     rating = Column(Integer, nullable=True)
     author = Column(String(255), nullable=True)
     date = Column(DateTime(timezone=True), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    review_metadata = Column('metadata', JSON, nullable=True)
     collection_run_id = Column(String(36), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     

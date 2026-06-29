@@ -120,28 +120,28 @@ class DataQualityService:
         
         # Remove HTML tags
         for field in ['title', 'content']:
-            if field in cleaned_record:
+            if field in cleaned:
                 cleaned[field] = self._remove_html_tags(str(cleaned[field]))
         
         # Normalize whitespace
         for field in ['title', 'content', 'author']:
-            if field in cleaned_record:
+            if field in cleaned:
                 cleaned[field] = self._normalize_whitespace(str(cleaned[field]))
         
         # Handle missing values
         for field in ['title', 'author', 'version']:
-            if field not in cleaned_record or not cleaned_record[field]:
-                cleaned_record[field] = 'Unknown'
+            if field not in cleaned or not cleaned[field]:
+                cleaned[field] = 'Unknown'
         
         # Normalize author names
-        if 'author' in cleaned_record:
-            cleaned_record['author'] = self._normalize_author(cleaned_record['author'])
+        if 'author' in cleaned:
+            cleaned['author'] = self._normalize_author(cleaned['author'])
         
         # Ensure source is set
-        if 'source' not in cleaned_record:
-            cleaned_record['source'] = source
+        if 'source' not in cleaned:
+            cleaned['source'] = source
         
-        return cleaned_record
+        return cleaned
     
     def _remove_html_tags(self, text: str) -> str:
         """Remove HTML tags from text"""
