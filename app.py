@@ -9,9 +9,13 @@ from pathlib import Path
 project_root = Path(__file__).parent
 backend_dir = project_root / "backend"
 sys.path.insert(0, str(backend_dir))
+sys.path.insert(0, str(project_root))
 
 # Import the FastAPI app
-from app.api.server import app as fastapi_app
+try:
+    from backend.app.api.server import app as fastapi_app
+except ImportError:
+    from app.api.server import app as fastapi_app
 
 # Vercel serverless function handler
 def handler(event, context):
