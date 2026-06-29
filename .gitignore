@@ -32,3 +32,6 @@ Thumbs.db
 build/
 dist/
 *.pyc
+
+# Backend (don't ignore - we want it in main repo)
+# backend/
