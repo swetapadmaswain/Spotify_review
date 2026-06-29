@@ -181,4 +181,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' }
     });
   },
+
+  getReports: async (): Promise<any[]> => {
+    return fetchJson<any[]>('/api/reports');
+  },
+
+  getReport: async (id: number): Promise<any> => {
+    return fetchJson<any>(`/api/reports/${id}`);
+  },
 };

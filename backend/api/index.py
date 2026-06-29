@@ -366,22 +366,26 @@ async def generate_insights(payload: Optional[dict] = None):
         pending = [r for r in reviews if r['id'] not in analyzed_ids][:800]
         analyzed_count = 0
         for review in pending:
-            label, score = _analyze_sentiment(review.get('review_text'))
-            db.table('sentiment_analysis').insert({
-                'review_id': review['id'],
-                'sentiment': label,
-                'confidence': score,
-                'emotion': label,
-                'intensity': 'medium' if score > 0.6 else 'low',
-            }).execute()
-            primary, secondary, scores = _extract_topic(review.get('review_text'))
-            db.table('topic_analysis').insert({
-                'review_id': review['id'],
-                'primary_topic': primary,
-                'secondary_topics': secondary,
-                'relevance_scores': scores,
-            }).execute()
-            analyzed_count += 1
+            try:
+                label, score = _analyze_sentiment(review.get('review_text'))
+                db.table('sentiment_analysis').insert({
+                    'review_id': review['id'],
+                    'sentiment': label,
+                    'confidence': score,
+                    'emotion': label,
+                    'intensity': 'medium' if score > 0.6 else 'low',
+                }).execute()
+                primary, secondary, scores = _extract_topic(review.get('review_text'))
+                db.table('topic_analysis').insert({
+                    'review_id': review['id'],
+                    'primary_topic': primary,
+                    'secondary_topics': secondary,
+                    'relevance_scores': scores,
+                }).execute()
+                analyzed_count += 1
+            except Exception as e:
+                # Log but continue with other reviews
+                print(f"Error analyzing review {review.get('id')}: {e}")
 
         summary = _generate_insight_tables(db)
         return {
@@ -392,6 +396,30 @@ async def generate_insights(payload: Optional[dict] = None):
                 **summary,
             },
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reports")
+async def get_reports():
+    try:
+        db = get_supabase()
+        result = db.table('generated_reports').select('id,created_at,report_type,template_type').order('created_at', desc=True).limit(20).execute()
+        return {"success": True, "data": result.data or []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reports/{report_id}")
+async def get_report(report_id: int):
+    try:
+        db = get_supabase()
+        result = db.table('generated_reports').select('*').eq('id', report_id).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Report not found")
+        return {"success": True, "data": result.data[0]}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
