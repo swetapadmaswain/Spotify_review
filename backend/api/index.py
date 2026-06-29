@@ -49,6 +49,15 @@ def get_supabase():
     return create_client(url, key)
 
 
+def get_supabase_admin():
+    """Client with service-role key for write operations (bypasses RLS)."""
+    url = (os.environ.get("SUPABASE_URL") or "").strip()
+    key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY") or "").strip()
+    if not url or not key:
+        raise Exception("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables")
+    return create_client(url, key)
+
+
 @app.get("/")
 async def root():
     return {
@@ -72,9 +81,12 @@ async def get_summary():
         segments = db.table("user_segments").select("*").execute()
         root_causes = db.table("root_cause_analysis").select("*").execute()
         unmet_needs = db.table("unmet_needs").select("*").execute()
+        reviews = db.table("raw_reviews").select("id", count="exact").limit(1).execute()
+        total_reviews = reviews.count if reviews.count is not None else len(reviews.data or [])
         return {
             "success": True,
             "data": {
+                "total_reviews": total_reviews,
                 "pattern_count": len(patterns.data),
                 "segment_count": len(segments.data),
                 "root_cause_count": len(root_causes.data),
@@ -347,7 +359,7 @@ def _generate_insight_tables(db):
 @app.post("/api/insights/generate")
 async def generate_insights(payload: Optional[dict] = None):
     try:
-        db = get_supabase()
+        db = get_supabase_admin()
         # Analyze any not-yet-analyzed reviews (bounded to avoid timeouts)
         analyzed_ids = {r['review_id'] for r in _fetch_all(db, 'sentiment_analysis', 'review_id')}
         reviews = _fetch_all(db, 'raw_reviews', 'id,review_text')
@@ -387,7 +399,7 @@ async def generate_insights(payload: Optional[dict] = None):
 @app.post("/api/reports/generate")
 async def generate_report(payload: Optional[dict] = None):
     try:
-        db = get_supabase()
+        db = get_supabase_admin()
         patterns = _fetch_all(db, 'pattern_insights', 'pattern_description,frequency')
         segments = _fetch_all(db, 'user_segments', 'segment_name,user_count')
         unmet = _fetch_all(db, 'unmet_needs', 'need_description,priority_score')
