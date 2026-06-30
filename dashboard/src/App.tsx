@@ -86,9 +86,11 @@ export default function App() {
       setRecommendations(rec);
       setRoadmap(rm);
       setLastUpdated(new Date());
+      if (isRefresh) showToast('Data refreshed successfully');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load data';
       setError(message);
+      if (isRefresh) showToast('Failed to refresh data');
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase';
 const API_BASE = 'https://spotify-insights-backend.vercel.app';
 
 async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = new URL(`${API_BASE}${path}`);
+  url.searchParams.set('_t', Date.now().toString());
+  const res = await fetch(url.toString(), {
     ...options,
     cache: 'no-cache',
     headers: {
